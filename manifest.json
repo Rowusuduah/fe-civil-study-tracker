@@ -1,0 +1,19 @@
+{
+  "name": "FE Civil Study Tracker",
+  "short_name": "FE Civil",
+  "description": "Adaptive study tracker for the FE Civil Engineering exam — spaced repetition, smart scheduling, and analytics.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0c12",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="FE Civil Study Tracker — Adaptive study planner for FE Civil exam preparation" />
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FE Civil" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <title>FE Civil Study Tracker</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="dark">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ── NAV ──────────────────────────────────────────────────────── -->
+  <nav id="nav" aria-label="Main navigation">
+    <div class="nav-brand" aria-hidden="true">
+      <span class="nav-logo">⚙</span>
+      <span class="nav-title">FE Civil</span>
+    </div>
+
+    <div class="nav-tabs-wrapper">
+      <ul role="tablist" id="tablist" aria-label="App sections">
+        <li role="presentation">
+          <button id="tab-dashboard"   role="tab" aria-controls="sec-dashboard"   aria-selected="true"  tabindex="0"  class="nav-tab active">
+            <span class="tab-icon" aria-hidden="true">◈</span><span class="tab-label">Dashboard</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-plan"        role="tab" aria-controls="sec-plan"        aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">📅</span><span class="tab-label">Plan</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-sessions"    role="tab" aria-controls="sec-sessions"    aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">✏</span><span class="tab-label">Log</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-subjects"    role="tab" aria-controls="sec-subjects"    aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">📚</span><span class="tab-label">Subjects</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-revision"    role="tab" aria-controls="sec-revision"    aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">🔁</span><span class="tab-label">Revision</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-resources"   role="tab" aria-controls="sec-resources"   aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">🎬</span><span class="tab-label">Resources</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-assessments" role="tab" aria-controls="sec-assessments" aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">📝</span><span class="tab-label">Mocks</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-analytics"   role="tab" aria-controls="sec-analytics"   aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">📊</span><span class="tab-label">Analytics</span>
+          </button>
+        </li>
+        <li role="presentation">
+          <button id="tab-settings"    role="tab" aria-controls="sec-settings"    aria-selected="false" tabindex="-1" class="nav-tab">
+            <span class="tab-icon" aria-hidden="true">⚙</span><span class="tab-label">Settings</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <button id="theme-toggle" class="btn-icon" aria-label="Toggle light/dark theme">☀</button>
+  </nav>
+
+  <!-- ── MAIN ──────────────────────────────────────────────────────── -->
+  <main id="main">
+
+    <!-- ═══ DASHBOARD ══════════════════════════════════════════════════ -->
+    <section id="sec-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="sec on">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <div id="exam-countdown" class="countdown-badge" aria-live="polite">…</div>
+      </div>
+
+      <div id="alert-banner" class="alert-banner hidden" role="alert" aria-live="assertive"></div>
+
+      <div id="kpi-grid" class="kpi-grid" aria-live="polite"></div>
+
+      <div class="dash-grid">
+        <div class="card card-accent span-2">
+          <div class="card-header">
+            <h2 class="card-title">What to Study Next</h2>
+            <span class="badge badge-blue">Adaptive</span>
+          </div>
+          <div id="recommendations" aria-live="polite">
+            <p class="empty-state">Log your first session to get recommendations.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Exam Readiness</h2>
+          <div id="readiness-gauge" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Today's Progress</h2>
+          <div id="today-progress" aria-live="polite"></div>
+        </div>
+
+        <div class="card span-2">
+          <h2 class="card-title">This Week</h2>
+          <div id="weekly-progress" aria-live="polite"></div>
+        </div>
+
+        <div class="card span-2">
+          <div class="card-header">
+            <h2 class="card-title">Subject Mastery</h2>
+            <span class="text-muted text-sm">Green = strong · Red = weak</span>
+          </div>
+          <div id="subject-mastery-grid" class="mastery-grid" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Due for Review</h2>
+            <span id="revision-due-count" class="badge badge-orange">0</span>
+          </div>
+          <div id="revision-due-list" aria-live="polite">
+            <p class="empty-state">No reviews due.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Priority Areas</h2>
+          <div id="weak-areas-list" aria-live="polite">
+            <p class="empty-state">Complete a session to see priorities.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STUDY PLAN ══════════════════════════════════════════════════ -->
+    <section id="sec-plan" role="tabpanel" aria-labelledby="tab-plan" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Study Plan</h1>
+        <div class="header-actions">
+          <button id="btn-generate-plan" class="btn btn-primary">Generate Plan</button>
+          <button id="btn-regenerate-plan" class="btn btn-ghost">Regenerate</button>
+        </div>
+      </div>
+
+      <div id="plan-kpis" class="kpi-grid" aria-live="polite"></div>
+
+      <div class="phase-legend">
+        <span class="phase-badge normal">Normal (6h/12h)</span>
+        <span class="phase-badge intense">Intense (14h)</span>
+        <span class="phase-badge sprint">Final Sprint</span>
+        <span class="phase-badge mock-day">Mock Day</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Study Calendar</h2>
+          <div class="calendar-nav">
+            <button id="cal-prev" class="btn-icon" aria-label="Previous month">‹</button>
+            <span id="cal-month-label" class="cal-month-label"></span>
+            <button id="cal-next" class="btn-icon" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
+      </div>
+
+      <div id="day-detail-panel" class="card hidden">
+        <h2 id="day-detail-title" class="card-title"></h2>
+        <div id="day-detail-content"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Weekly Milestones</h2>
+        <div id="weekly-milestones" aria-live="polite">
+          <p class="empty-state">Generate a plan to see milestones.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SESSION LOGGER ══════════════════════════════════════════════ -->
+    <section id="sec-sessions" role="tabpanel" aria-labelledby="tab-sessions" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Log Session</h1>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card">
+          <h2 class="card-title" id="session-form-title">New Session</h2>
+          <form id="session-form" novalidate>
+            <input type="hidden" id="session-id" />
+
+            <div class="form-group">
+              <label class="form-label">Session Type <span class="required" aria-hidden="true">*</span></label>
+              <div class="type-selector" role="group" aria-label="Session type">
+                <button type="button" class="type-btn active" data-type="practice">📝 Practice</button>
+                <button type="button" class="type-btn" data-type="video">🎬 Video</button>
+                <button type="button" class="type-btn" data-type="revision">🔁 Revision</button>
+                <button type="button" class="type-btn" data-type="formula">📐 Formula</button>
+                <button type="button" class="type-btn" data-type="mock">🎯 Mock</button>
+                <button type="button" class="type-btn" data-type="error_review">⚠ Error Review</button>
+              </div>
+              <input type="hidden" id="session-type" value="practice" />
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label class="form-label" for="session-date">Date <span class="required" aria-hidden="true">*</span></label>
+                <input type="date" id="session-date" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-start">Start</label>
+                <input type="time" id="session-start" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-end">End</label>
+                <input type="time" id="session-end" class="form-input" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="session-duration">Duration (min) <span class="required" aria-hidden="true">*</span></label>
+              <input type="number" id="session-duration" class="form-input" min="1" max="900" placeholder="Auto-calc from start/end, or enter manually" />
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label class="form-label" for="session-subject">Subject <span class="required" aria-hidden="true">*</span></label>
+                <select id="session-subject" class="form-input" required>
+                  <option value="">Select subject…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-topic">Topic</label>
+                <select id="session-topic" class="form-input">
+                  <option value="">All topics</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-subtopic">Subtopic</label>
+                <select id="session-subtopic" class="form-input">
+                  <option value="">All subtopics</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="ratings-row">
+              <div class="rating-group">
+                <label class="form-label">Confidence Before</label>
+                <div class="star-row" id="conf-before-stars" data-field="session-confidence-before"></div>
+                <input type="hidden" id="session-confidence-before" value="3" />
+              </div>
+              <div class="rating-group">
+                <label class="form-label">Confidence After</label>
+                <div class="star-row" id="conf-after-stars" data-field="session-confidence-after"></div>
+                <input type="hidden" id="session-confidence-after" value="3" />
+              </div>
+              <div class="rating-group">
+                <label class="form-label">Difficulty</label>
+                <div class="star-row" id="difficulty-stars" data-field="session-difficulty"></div>
+                <input type="hidden" id="session-difficulty" value="3" />
+              </div>
+              <div class="rating-group">
+                <label class="form-label">Fatigue</label>
+                <div class="star-row" id="fatigue-stars" data-field="session-fatigue"></div>
+                <input type="hidden" id="session-fatigue" value="3" />
+              </div>
+            </div>
+
+            <div id="questions-block" class="form-grid-4">
+              <div class="form-group">
+                <label class="form-label" for="session-q-attempted">Attempted</label>
+                <input type="number" id="session-q-attempted" class="form-input" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-q-correct">Correct</label>
+                <input type="number" id="session-q-correct" class="form-input" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-q-incorrect">Incorrect</label>
+                <input type="number" id="session-q-incorrect" class="form-input" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="session-q-guessed">Guessed</label>
+                <input type="number" id="session-q-guessed" class="form-input" min="0" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="session-resource">Resource Used</label>
+              <input type="text" id="session-resource" class="form-input" maxlength="200" placeholder="e.g. PPI FE Review Manual Ch.4" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="session-notes">Notes</label>
+              <textarea id="session-notes" class="form-input" rows="3" maxlength="1000" placeholder="Key takeaways, confusion points…"></textarea>
+            </div>
+
+            <div class="flags-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="session-flagged" />
+                <span>Flag for review</span>
+              </label>
+              <label class="checkbox-label" id="rewatch-label">
+                <input type="checkbox" id="session-rewatch" />
+                <span>Rewatch needed</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="session-followup">Follow-up Date</label>
+              <input type="date" id="session-followup" class="form-input" />
+            </div>
+
+            <div id="mismatch-warning" class="alert-inline hidden" role="alert"></div>
+
+            <div class="form-actions">
+              <button type="submit" id="session-save-btn" class="btn btn-primary">Save Session</button>
+              <button type="button" id="session-cancel-btn" class="btn btn-ghost hidden">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Recent Sessions</h2>
+              <input type="text" id="session-search" class="form-input form-input-sm" placeholder="Search…" aria-label="Search sessions" />
+            </div>
+            <div id="sessions-list" class="item-list" aria-live="polite">
+              <p class="empty-state">No sessions logged yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SUBJECT TRACKER ═════════════════════════════════════════════ -->
+    <section id="sec-subjects" role="tabpanel" aria-labelledby="tab-subjects" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Subject Tracker</h1>
+        <div class="header-actions">
+          <input type="text" id="subjects-search" class="form-input form-input-sm" placeholder="Search topics…" aria-label="Search subjects" />
+          <select id="subjects-filter" class="form-input form-input-sm" aria-label="Filter subjects">
+            <option value="all">All</option>
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="complete">Complete</option>
+            <option value="weak">Weak (Priority)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header">
+          <h2 class="card-title">Overall Coverage</h2>
+          <span id="overall-coverage-pct" class="badge badge-blue">0%</span>
+        </div>
+        <div class="progress-wrap" style="margin-top:.5rem">
+          <div class="progress-bar" id="overall-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div id="subject-tree" class="subject-tree" aria-live="polite">
+        <p class="empty-state">Loading…</p>
+      </div>
+    </section>
+
+    <!-- ═══ REVISION ENGINE ═════════════════════════════════════════════ -->
+    <section id="sec-revision" role="tabpanel" aria-labelledby="tab-revision" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Revision Engine</h1>
+        <span id="rev-total-due" class="badge badge-orange">0 due</span>
+      </div>
+
+      <div class="two-col-layout">
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-header">
+              <h2 class="card-title">Due Today</h2>
+              <span id="rev-due-count" class="badge badge-red">0</span>
+            </div>
+            <div id="rev-due-list" aria-live="polite">
+              <p class="empty-state">Nothing due today.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Upcoming (7 days)</h2>
+            </div>
+            <div id="rev-upcoming-list" aria-live="polite">
+              <p class="empty-state">No upcoming reviews.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-header">
+              <h2 class="card-title">Mistake Notebook</h2>
+              <button id="btn-add-mistake" class="btn btn-sm btn-ghost">+ Add</button>
+            </div>
+            <div id="mistake-list" aria-live="polite">
+              <p class="empty-state">No mistakes logged.</p>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-header">
+              <h2 class="card-title">Keep Missing</h2>
+              <span class="text-muted text-sm">2+ mistakes</span>
+            </div>
+            <div id="keep-missing-list" aria-live="polite">
+              <p class="empty-state">No persistent problem areas.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Neglected Topics</h2>
+              <span class="text-muted text-sm">14+ days</span>
+            </div>
+            <div id="neglected-list" aria-live="polite">
+              <p class="empty-state">No neglected topics.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mistake modal -->
+      <div id="mistake-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mistake-modal-title">
+        <div class="modal-box">
+          <h2 id="mistake-modal-title" class="card-title">Log Mistake</h2>
+          <form id="mistake-form">
+            <div class="form-group">
+              <label class="form-label" for="mistake-subject">Subject</label>
+              <select id="mistake-subject" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mistake-topic">Topic</label>
+              <select id="mistake-topic" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mistake-subtopic">Subtopic</label>
+              <select id="mistake-subtopic" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mistake-type">Type</label>
+              <select id="mistake-type" class="form-input">
+                <option value="conceptual">Conceptual</option>
+                <option value="calculation">Calculation</option>
+                <option value="careless">Careless</option>
+                <option value="guessed">Guessed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mistake-question">Question Ref</label>
+              <input type="text" id="mistake-question" class="form-input" maxlength="200" placeholder="e.g. PPI Ch3 Q14" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mistake-notes">Notes</label>
+              <textarea id="mistake-notes" class="form-input" rows="3" maxlength="500"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" id="btn-close-mistake" class="btn btn-ghost">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ RESOURCES ═══════════════════════════════════════════════════ -->
+    <section id="sec-resources" role="tabpanel" aria-labelledby="tab-resources" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Resources</h1>
+        <button id="btn-add-resource" class="btn btn-primary">+ Add Resource</button>
+      </div>
+
+      <div class="filter-bar" style="margin-bottom:1rem">
+        <select id="resource-type-filter" class="form-input form-input-sm">
+          <option value="all">All Types</option>
+          <option value="video">Videos</option>
+          <option value="book">Books</option>
+          <option value="problem_set">Problem Sets</option>
+          <option value="formula_sheet">Formula Sheets</option>
+          <option value="notes">Notes</option>
+        </select>
+        <select id="resource-subject-filter" class="form-input form-input-sm">
+          <option value="all">All Subjects</option>
+        </select>
+        <input type="text" id="resource-search" class="form-input form-input-sm" placeholder="Search…" />
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card" id="resource-form-card">
+          <h2 class="card-title" id="resource-form-title">Add Resource</h2>
+          <form id="resource-form">
+            <input type="hidden" id="resource-id" />
+            <div class="form-group">
+              <label class="form-label" for="resource-type">Type</label>
+              <select id="resource-type" class="form-input">
+                <option value="video">Video</option>
+                <option value="book">Book</option>
+                <option value="problem_set">Problem Set</option>
+                <option value="formula_sheet">Formula Sheet</option>
+                <option value="notes">Notes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resource-title">Title <span class="required" aria-hidden="true">*</span></label>
+              <input type="text" id="resource-title" class="form-input" maxlength="200" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resource-source">Source</label>
+              <input type="text" id="resource-source" class="form-input" maxlength="200" placeholder="PPI, NCEES, YouTube…" />
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="res-subject">Subject</label>
+                <select id="res-subject" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="res-topic">Topic</label>
+                <select id="res-topic" class="form-input"></select>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="resource-duration">Duration (min)</label>
+                <input type="number" id="resource-duration" class="form-input" min="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="resource-progress">Progress (%)</label>
+                <input type="number" id="resource-progress" class="form-input" min="0" max="100" value="0" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resource-chapter">Chapter / Pages</label>
+              <input type="text" id="resource-chapter" class="form-input" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resource-notes">Notes</label>
+              <textarea id="resource-notes" class="form-input" rows="2" maxlength="500"></textarea>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" id="resource-rewatch" />
+              <span>Rewatch / Re-read needed</span>
+            </label>
+            <div class="form-actions" style="margin-top:1rem">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" id="resource-cancel-btn" class="btn btn-ghost hidden">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="resource-list" class="item-list" aria-live="polite">
+          <p class="empty-state">No resources added yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ MOCK EXAMS ══════════════════════════════════════════════════ -->
+    <section id="sec-assessments" role="tabpanel" aria-labelledby="tab-assessments" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Mock Exams</h1>
+        <button id="btn-add-assessment" class="btn btn-primary">+ Log Mock</button>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card" id="assessment-form-card">
+          <h2 class="card-title" id="assessment-form-title">Log Mock Exam</h2>
+          <form id="assessment-form">
+            <input type="hidden" id="assessment-id" />
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="assessment-date">Date <span class="required" aria-hidden="true">*</span></label>
+                <input type="date" id="assessment-date" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="assessment-type">Type</label>
+                <select id="assessment-type" class="form-input">
+                  <option value="full_mock">Full Mock</option>
+                  <option value="section_quiz">Section Quiz</option>
+                  <option value="self_test">Self Test</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label class="form-label" for="assessment-total">Total Qs</label>
+                <input type="number" id="assessment-total" class="form-input" min="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="assessment-correct">Correct</label>
+                <input type="number" id="assessment-correct" class="form-input" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="assessment-time">Time (min)</label>
+                <input type="number" id="assessment-time" class="form-input" min="1" />
+              </div>
+            </div>
+
+            <details class="expandable-block">
+              <summary class="expandable-summary">Section Scores (optional)</summary>
+              <div id="assessment-section-scores" class="section-scores-grid"></div>
+            </details>
+
+            <div class="form-group">
+              <label class="form-label" for="assessment-notes">Error Analysis</label>
+              <textarea id="assessment-notes" class="form-input" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="assessment-remediation">Remediation Plan</label>
+              <textarea id="assessment-remediation" class="form-input" rows="2" maxlength="500"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" id="assessment-cancel-btn" class="btn btn-ghost hidden">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h2 class="card-title">Score Trend</h2>
+            <div id="assessment-trend-chart" class="chart-container" aria-live="polite">
+              <p class="empty-state">Log a mock exam to see trends.</p>
+            </div>
+          </div>
+          <div id="assessment-list" class="item-list" aria-live="polite">
+            <p class="empty-state">No mock exams logged.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ANALYTICS ═══════════════════════════════════════════════════ -->
+    <section id="sec-analytics" role="tabpanel" aria-labelledby="tab-analytics" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Analytics</h1>
+        <select id="analytics-range" class="form-input form-input-sm" aria-label="Time range">
+          <option value="all">All Time</option>
+          <option value="30">Last 30 Days</option>
+          <option value="14">Last 14 Days</option>
+          <option value="7">Last 7 Days</option>
+        </select>
+      </div>
+
+      <div id="analytics-kpis" class="kpi-grid" aria-live="polite"></div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <h2 class="card-title">Study Heatmap</h2>
+        <div id="study-heatmap" class="heatmap-container" aria-label="Study activity heatmap"></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card"><h2 class="card-title">Hours per Subject</h2><div id="chart-hours-subject" class="chart-sm"></div></div>
+        <div class="card"><h2 class="card-title">Accuracy by Subject</h2><div id="chart-accuracy-subject" class="chart-sm"></div></div>
+        <div class="card"><h2 class="card-title">Hours Over Time</h2><div id="chart-hours-time" class="chart-sm"></div></div>
+        <div class="card"><h2 class="card-title">Confidence vs Accuracy</h2><div id="chart-conf-accuracy" class="chart-sm"></div></div>
+        <div class="card"><h2 class="card-title">Planned vs Actual</h2><div id="chart-planned-actual" class="chart-sm"></div></div>
+        <div class="card"><h2 class="card-title">Subject Coverage</h2><div id="chart-coverage" class="chart-sm"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h2 class="card-title">Readiness Forecast</h2>
+        <div id="readiness-forecast" class="chart-container" aria-live="polite">
+          <p class="empty-state">Complete more sessions to see forecast.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SETTINGS ════════════════════════════════════════════════════ -->
+    <section id="sec-settings" role="tabpanel" aria-labelledby="tab-settings" class="sec">
+      <div class="page-header">
+        <h1 class="page-title">Settings</h1>
+      </div>
+
+      <div class="settings-grid">
+        <div class="card">
+          <h2 class="card-title">Exam Configuration</h2>
+          <div class="form-group">
+            <label class="form-label" for="set-exam-date">Exam Date</label>
+            <input type="date" id="set-exam-date" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="set-intense-date">Intense Phase Start</label>
+            <input type="date" id="set-intense-date" class="form-input" />
+            <span class="form-hint">Daily hours increase to intense level from this date.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="set-name">Your Name (optional)</label>
+            <input type="text" id="set-name" class="form-input" maxlength="100" />
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Daily Study Hours</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="set-weekday-hours">Weekday</label>
+              <input type="number" id="set-weekday-hours" class="form-input" min="1" max="20" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="set-weekend-hours">Weekend</label>
+              <input type="number" id="set-weekend-hours" class="form-input" min="1" max="24" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="set-intense-hours">Intense (hr/day)</label>
+              <input type="number" id="set-intense-hours" class="form-input" min="1" max="20" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="set-daily-cap">Daily Cap</label>
+              <input type="number" id="set-daily-cap" class="form-input" min="6" max="24" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Revision Settings</h2>
+          <div class="form-group">
+            <label class="form-label" for="set-intervals">Review Intervals (days)</label>
+            <input type="text" id="set-intervals" class="form-input" placeholder="1,3,7,14,30" />
+            <span class="form-hint">Comma-separated values, e.g. 1,3,7,14,30</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="set-neglect-days">Neglect Threshold (days)</label>
+            <input type="number" id="set-neglect-days" class="form-input" min="3" max="60" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="set-final-sprint">Final Sprint Days</label>
+            <input type="number" id="set-final-sprint" class="form-input" min="3" max="30" />
+          </div>
+          <button id="btn-save-settings" class="btn btn-primary" style="margin-top:.75rem">Save Settings</button>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Appearance</h2>
+          <div class="btn-group">
+            <button id="set-theme-dark"  class="btn btn-sm btn-ghost">Dark Mode</button>
+            <button id="set-theme-light" class="btn btn-sm btn-ghost">Light Mode</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Backup &amp; Restore</h2>
+          <p class="text-muted text-sm" style="margin-bottom:.75rem">Export regularly to avoid data loss.</p>
+          <div class="btn-group">
+            <button id="btn-export-backup" class="btn btn-ghost">Export JSON</button>
+            <label class="btn btn-ghost" for="import-backup-file" style="cursor:pointer">Import JSON</label>
+            <input type="file" id="import-backup-file" accept=".json" class="hidden" aria-label="Import backup" />
+          </div>
+          <div id="backup-status" class="form-hint" style="margin-top:.5rem" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Google Drive Sync</h2>
+          <p class="text-muted text-sm" style="margin-bottom:.75rem">Requires OAuth Client ID in app.js.</p>
+          <div class="btn-group">
+            <button id="btn-save-drive" class="btn btn-ghost">Save to Drive</button>
+            <button id="btn-load-drive" class="btn btn-ghost">Load from Drive</button>
+          </div>
+          <div id="gdrive-status" class="form-hint" style="margin-top:.5rem" aria-live="polite"></div>
+        </div>
+
+        <div class="card" style="border-color:var(--red);border-width:1px;border-style:solid">
+          <h2 class="card-title" style="color:var(--red)">Danger Zone</h2>
+          <p class="text-muted text-sm" style="margin-bottom:.75rem">These actions cannot be undone. Export a backup first.</p>
+          <div class="btn-group">
+            <button id="btn-reset-data"    class="btn btn-danger btn-sm">Reset All Data</button>
+            <button id="btn-factory-reset" class="btn btn-danger btn-sm">Factory Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem;text-align:center">
+        <p class="text-muted text-sm">FE Civil Study Tracker — Exam: <strong>April 22, 2026</strong></p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Google Identity Services (optional Drive sync) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Load order: data → engine → state → ui → app -->
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/data/baseline.js"></script>
+  <script src="js/data/subjects.js"></script>
+  <script src="js/engine/calculations.js"></script>
+  <script src="js/engine/spacedRepetition.js"></script>
+  <script src="js/engine/adaptive.js"></script>
+  <script src="js/engine/scheduler.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/ui/ui-dashboard.js"></script>
+  <script src="js/ui/ui-plan.js"></script>
+  <script src="js/ui/ui-sessions.js"></script>
+  <script src="js/ui/ui-subjects.js"></script>
+  <script src="js/ui/ui-revision.js"></script>
+  <script src="js/ui/ui-resources.js"></script>
+  <script src="js/ui/ui-assessments.js"></script>
+  <script src="js/ui/ui-analytics.js"></script>
+  <script src="js/ui/ui-settings.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

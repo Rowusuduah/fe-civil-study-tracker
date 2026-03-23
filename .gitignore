@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build artifacts (none currently — vanilla JS)
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies (none currently)
+node_modules/
+
+# Backup files
+*.bak
+*.backup
+
+# Temp
+*.tmp
