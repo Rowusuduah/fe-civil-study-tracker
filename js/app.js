@@ -21,13 +21,53 @@ let _driveSyncTimer= null;
 // ─── Active Tab Tracker ───────────────────────────────────────────────────────
 let _activeTab = 'dashboard';
 
-// ─── App Init ─────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initState();           // Load all data from localStorage
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// SHA-256 of "preparation_intense"
+const AUTH_HASH = '63c0e99f5c0595eefcab57e9e55000b2f4223d39c93315854e3470005c989281';
+const AUTH_KEY  = 'fe_civil_auth';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function bootApp() {
+  initState();
   applyTheme(STATE.theme);
   bindAllEvents();
   switchTab('tab-dashboard');
   autoSyncDrive();
+}
+
+function initAuth() {
+  const gate = document.getElementById('login-gate');
+  if (sessionStorage.getItem(AUTH_KEY) === '1') {
+    gate.style.display = 'none';
+    bootApp();
+    return;
+  }
+  gate.style.display = 'flex';
+  document.getElementById('login-pw').focus();
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw    = document.getElementById('login-pw').value;
+    const hash  = await sha256(pw);
+    const errEl = document.getElementById('login-error');
+    if (hash === AUTH_HASH) {
+      sessionStorage.setItem(AUTH_KEY, '1');
+      gate.style.display = 'none';
+      bootApp();
+    } else {
+      errEl.textContent = 'Incorrect password. Try again.';
+      document.getElementById('login-pw').value = '';
+      document.getElementById('login-pw').focus();
+    }
+  });
+}
+
+// ─── App Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initAuth();
 });
 
 // ─── Theme ────────────────────────────────────────────────────────────────────

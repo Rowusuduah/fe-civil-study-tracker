@@ -15,6 +15,23 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="dark">
+  <!-- ── LOGIN GATE ──────────────────────────────────────────────────────── -->
+  <div id="login-gate" role="dialog" aria-modal="true" aria-label="Login" style="display:none">
+    <div class="login-card">
+      <div class="login-logo" aria-hidden="true">⚙</div>
+      <h1 class="login-title">FE Civil Tracker</h1>
+      <p class="login-sub">Enter your password to continue</p>
+      <form id="login-form" novalidate>
+        <div class="login-field">
+          <label for="login-pw" class="sr-only">Password</label>
+          <input id="login-pw" type="password" placeholder="Password" autocomplete="current-password" required />
+        </div>
+        <div id="login-error" class="login-error" role="alert" aria-live="polite"></div>
+        <button type="submit" class="login-btn">Unlock</button>
+      </form>
+    </div>
+  </div>
+
   <a class="skip-link" href="#main">Skip to content</a>
 
   <!-- ── NAV ──────────────────────────────────────────────────────── -->
