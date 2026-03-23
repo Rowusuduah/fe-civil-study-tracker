@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"E:/Desktop/Claude Projects/Website/FE exams\" && git add -A && git diff --cached --quiet || git commit -m \"chore: auto-save changes\" 2>/dev/null || true",
+            "statusMessage": "Auto-committing changes..."
+          }
+        ]
+      }
+    ]
+  }
+}
