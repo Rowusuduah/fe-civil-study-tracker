@@ -14,7 +14,7 @@
  *   - No single subject > 40% of a day (except final sprint)
  *   - Revision blocks inserted when items are due within 2 days
  *   - Final N days (finalSprintDays): revision + mock + error review only
- *   - Every ~14 days: insert a full mock exam day
+ *   - Every ~7 days: insert a full mock exam day
  */
 function generateStudyPlan(subjects, settings, existingSessions = []) {
   const startDate = resolveStartDate(settings);
@@ -34,7 +34,7 @@ function generateStudyPlan(subjects, settings, existingSessions = []) {
     const phase = date >= intenseStart ? 'intense' : 'normal';
     const isFinalSprint = date >= finalSprintStart;
     const plannedHours = plannedHoursForDate(date, settings);
-    const isMockDay = !isFinalSprint && dayIndex % 14 === 0 && days.length > 14;
+    const isMockDay = !isFinalSprint && dayIndex % 7 === 0 && dayIndex > 0 && days.length > 7;
 
     const studyBlocks = [];
 
