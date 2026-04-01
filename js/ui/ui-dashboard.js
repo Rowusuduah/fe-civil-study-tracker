@@ -138,19 +138,24 @@ function renderReadinessGauge() {
   el.innerHTML = `
     <div class="gauge-wrap">
       <div class="gauge-ring">
-        <svg viewBox="0 0 100 100">
+        <svg viewBox="0 0 100 100" role="img" aria-label="Readiness gauge showing ${score != null ? Math.round(pct) + '%' : 'no data'}">
           <circle class="gauge-track" cx="50" cy="50" r="40" />
-          <circle class="gauge-fill" cx="50" cy="50" r="40"
-            stroke="${color}"
-            stroke-dasharray="${circumference}"
-            stroke-dashoffset="${offset}"
-          />
+          <circle class="gauge-fill" cx="50" cy="50" r="40" />
         </svg>
-        <div class="gauge-score" style="color:${color}">${score != null ? Math.round(pct) : '—'}</div>
+        <div class="gauge-score">${score != null ? Math.round(pct) : '—'}</div>
       </div>
-      <div class="gauge-label">${score != null ? label : 'No data yet'}</div>
+      <div class="gauge-label">${score != null ? escapeHTML(label) : 'No data yet'}</div>
     </div>
   `;
+  // Set dynamic styles via DOM API to avoid XSS via template injection
+  const fillCircle = el.querySelector('.gauge-fill');
+  if (fillCircle) {
+    fillCircle.setAttribute('stroke', color);
+    fillCircle.setAttribute('stroke-dasharray', circumference);
+    fillCircle.setAttribute('stroke-dashoffset', offset);
+  }
+  const scoreEl = el.querySelector('.gauge-score');
+  if (scoreEl) scoreEl.style.color = color;
 }
 
 // ─── Today Progress ───────────────────────────────────────────────────────────

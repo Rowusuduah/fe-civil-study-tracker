@@ -126,7 +126,7 @@ function renderMistakeList() {
   }).join('');
 
   if (unresolved.length > 0) {
-    el.innerHTML = `<div class="badge badge-red" style="margin-bottom:.5rem">${unresolved.length} unresolved</div>` + el.innerHTML;
+    el.insertAdjacentHTML('afterbegin', `<div class="badge badge-red" style="margin-bottom:.5rem">${unresolved.length} unresolved</div>`);
   }
 }
 
