@@ -65,11 +65,12 @@ function addDays(isoStr, n) {
   return toISO(d);
 }
 
-/** Days between two YYYY-MM-DD strings (b - a). Positive if b is after a. */
+/** Days between two YYYY-MM-DD strings (b - a). Positive if b is after a. Uses truncation to avoid DST rounding errors. */
 function daysBetween(isoA, isoB) {
   const a = parseISO(isoA);
   const b = parseISO(isoB);
-  return Math.round((b - a) / 86400000);
+  const diff = (b - a) / 86400000;
+  return diff >= 0 ? Math.floor(diff + 0.5) : Math.ceil(diff - 0.5);
 }
 
 /** Returns true if the given YYYY-MM-DD is a Saturday or Sunday */
@@ -106,6 +107,16 @@ function relativeDate(isoStr) {
   if (diff === -1) return 'yesterday';
   if (diff > 0) return `in ${diff} days`;
   return `${Math.abs(diff)} days ago`;
+}
+
+/** Resolve the effective study start date: uses settings.studyStartDate if set and not in the past, otherwise tomorrow. */
+function resolveStartDate(settings) {
+  if (!settings) return addDays(todayISO(), 1);
+  const today = todayISO();
+  if (settings.studyStartDate && settings.studyStartDate >= today) {
+    return settings.studyStartDate;
+  }
+  return addDays(today, 1);
 }
 
 /** Exam countdown in full days from today */
@@ -273,7 +284,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     escapeHTML, genId,
     todayISO, toISO, parseISO, addDays, daysBetween, isWeekend,
-    fmtDate, fmtDateShort, relativeDate, daysUntilExam, dateRange, getMondayOfWeek,
+    fmtDate, fmtDateShort, relativeDate, resolveStartDate, daysUntilExam, dateRange, getMondayOfWeek,
     clamp, roundTo, fmtScore, fmtPct, fmtDuration, fmtHours, safeAccuracy,
     scoreColorClass, tierColorClass,
     qs, el, show, hide, toggleHidden,

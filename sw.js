@@ -28,10 +28,14 @@ const APP_SHELL  = [
   './manifest.json',
 ];
 
-// Pre-cache the app shell on install
+// Pre-cache the app shell on install (individual failures don't block install)
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.allSettled(APP_SHELL.map(url =>
+        cache.add(url).catch(err => console.warn(`[sw] Failed to cache ${url}:`, err))
+      ))
+    )
   );
   self.skipWaiting();
 });

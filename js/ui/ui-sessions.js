@@ -85,27 +85,43 @@ function initStarRatings() {
     if (!row || !hidden) return;
 
     row.innerHTML = '';
+    row.setAttribute('role', 'radiogroup');
+    row.setAttribute('tabindex', '0');
     for (let i = 1; i <= 5; i++) {
       const star = document.createElement('span');
-      star.className = 'star' + (i <= parseInt(hidden.value || 3) ? ' filled' : '');
+      star.className = 'star' + (i <= parseInt(hidden.value || 3, 10) ? ' filled' : '');
       star.textContent = '★';
-      star.setAttribute('role', 'button');
+      star.setAttribute('role', 'radio');
+      star.setAttribute('aria-checked', i <= parseInt(hidden.value || 3, 10) ? 'true' : 'false');
       star.setAttribute('aria-label', `${i} star${i > 1 ? 's' : ''}`);
+      star.setAttribute('tabindex', '-1');
       star.dataset.value = i;
       star.addEventListener('click', () => {
         hidden.value = i;
         updateStars(row, i);
-        // Check for confidence mismatch warning
         if (hiddenId === 'session-confidence-after') checkMismatchWarning();
       });
       row.appendChild(star);
     }
+    // Keyboard navigation: arrow keys to change rating
+    row.addEventListener('keydown', e => {
+      const cur = parseInt(hidden.value || 3, 10);
+      let next = cur;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = Math.min(5, cur + 1);
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = Math.max(1, cur - 1);
+      else return;
+      e.preventDefault();
+      hidden.value = next;
+      updateStars(row, next);
+      if (hiddenId === 'session-confidence-after') checkMismatchWarning();
+    });
   });
 }
 
 function updateStars(row, value) {
   row.querySelectorAll('.star').forEach((s, idx) => {
     s.classList.toggle('filled', idx < value);
+    s.setAttribute('aria-checked', idx < value ? 'true' : 'false');
   });
 }
 

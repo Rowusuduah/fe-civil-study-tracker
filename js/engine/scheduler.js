@@ -1,6 +1,6 @@
 /**
  * scheduler.js — Study plan generation, phase logic, and catch-up.
- * Generates a day-by-day plan from tomorrow to exam day.
+ * Generates a day-by-day plan from the configured start date to exam day.
  */
 
 // ─── Plan Generation ──────────────────────────────────────────────────────────
@@ -17,8 +17,7 @@
  *   - Every ~14 days: insert a full mock exam day
  */
 function generateStudyPlan(subjects, settings, existingSessions = []) {
-  const today = todayISO();
-  const startDate = addDays(today, 1); // plan starts tomorrow
+  const startDate = resolveStartDate(settings);
   const examDate = settings.examDate;
   const finalSprintStart = addDays(examDate, -settings.finalSprintDays);
   const intenseStart = settings.intensePhaseDate;
@@ -35,7 +34,7 @@ function generateStudyPlan(subjects, settings, existingSessions = []) {
     const phase = date >= intenseStart ? 'intense' : 'normal';
     const isFinalSprint = date >= finalSprintStart;
     const plannedHours = plannedHoursForDate(date, settings);
-    const isMockDay = !isFinalSprint && dayIndex % 14 === 0;
+    const isMockDay = !isFinalSprint && dayIndex % 14 === 0 && days.length > 14;
 
     const studyBlocks = [];
 
@@ -59,8 +58,9 @@ function generateStudyPlan(subjects, settings, existingSessions = []) {
       const sortedSubj = [...subjectAlloc].sort((a, b) => b.allocWeight - a.allocWeight);
       const topSubjects = sortedSubj.slice(0, 3);
 
+      const totalAllocWeight = topSubjects.reduce((s, a) => s + a.allocWeight, 0);
       topSubjects.forEach((alloc, idx) => {
-        const fraction = alloc.allocWeight / topSubjects.reduce((s, a) => s + a.allocWeight, 0);
+        const fraction = totalAllocWeight > 0 ? alloc.allocWeight / totalAllocWeight : 1 / topSubjects.length;
         const minutes = Math.min(Math.round(remaining * fraction), maxPerSubject);
         if (minutes >= 20) {
           studyBlocks.push({
@@ -137,16 +137,14 @@ function computeSubjectAllocations(subjects, settings) {
  */
 function regeneratePlan(existingPlan, subjects, settings, sessions) {
   const today = todayISO();
-  const pastDays = existingPlan.filter(d => d.date < today);
-
-  // Attach actual hours to past days
+  // Clone past days to avoid mutating the original plan
   const sessionMap = {};
   sessions.forEach(s => {
     sessionMap[s.date] = (sessionMap[s.date] || 0) + (s.durationMinutes || 0) / 60;
   });
-  pastDays.forEach(d => {
-    d.actualHours = roundTo(sessionMap[d.date] || 0, 2);
-    d.missedFlag = d.actualHours < d.plannedHours * 0.5;
+  const pastDays = existingPlan.filter(d => d.date < today).map(d => {
+    const actual = roundTo(sessionMap[d.date] || 0, 2);
+    return { ...d, actualHours: actual, missedFlag: actual < d.plannedHours * 0.5 };
   });
 
   // Generate fresh future plan
@@ -232,8 +230,7 @@ function getWeekPlan(plan, anyDateInWeek) {
  * Returns array of { weekStart, targets: [{ subjectId, targetCompletionPct }] }
  */
 function generateWeeklyMilestones(subjects, settings) {
-  const today = todayISO();
-  const startDate = addDays(today, 1);
+  const startDate = resolveStartDate(settings);
   const examDate = settings.examDate;
   const totalWeeks = Math.ceil(daysBetween(startDate, examDate) / 7);
 

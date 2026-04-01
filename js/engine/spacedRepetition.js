@@ -110,10 +110,12 @@ function buildRevisionQueue(subjects, today = todayISO()) {
     });
   });
 
-  // Sort: most overdue first, then by review priority
+  // Sort: most overdue first, then by review priority, then by ID for determinism
   queue.sort((a, b) => {
     if (a.overdueDays !== b.overdueDays) return b.overdueDays - a.overdueDays;
-    return (a.lastPerformance || 0.5) - (b.lastPerformance || 0.5); // weaker first
+    const perfDiff = (a.lastPerformance || 0.5) - (b.lastPerformance || 0.5);
+    if (perfDiff !== 0) return perfDiff; // weaker first
+    return (a.subtopicId || '').localeCompare(b.subtopicId || ''); // stable tie-break
   });
 
   return queue;

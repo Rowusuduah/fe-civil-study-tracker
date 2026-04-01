@@ -48,6 +48,16 @@ function initAuth() {
   }
   gate.style.display = 'flex';
   document.getElementById('login-pw').focus();
+  // Focus trap: keep focus inside the login modal
+  gate.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      const focusable = gate.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const pw    = document.getElementById('login-pw').value;

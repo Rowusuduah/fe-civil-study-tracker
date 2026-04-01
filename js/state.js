@@ -181,8 +181,8 @@ function refreshDerived() {
     .filter(s => s.date >= monday && s.date <= sunday)
     .reduce((sum, s) => sum + (s.durationMinutes || 0) / 60, 0);
 
-  // Overdue revisions
-  c.overdueRevisionCount = STATE.revisions.filter(r => r.nextReviewDate <= today).length;
+  // Overdue revisions (guard against null/malformed dates)
+  c.overdueRevisionCount = STATE.revisions.filter(r => r.nextReviewDate && r.nextReviewDate <= today).length;
 
   // Readiness score (weighted mastery)
   c.readinessScore = computeReadiness(STATE.subjects);

@@ -31,6 +31,7 @@ const BACKUP_VERSION = 1;
 // ─── Default Settings ────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS = {
+  studyStartDate: null,
   examDate: '2026-04-22',
   intensePhaseDate: '2026-04-10',
   weekdayHours: 6,
@@ -61,7 +62,7 @@ function loadJSON(key, defaultValue = null) {
     if (raw === null) return defaultValue;
     return JSON.parse(raw);
   } catch (e) {
-    console.warn(`[storage] Failed to parse ${key}:`, e);
+    console.error(`[storage] Failed to parse ${key} — returning default. Data may be corrupted:`, e);
     return defaultValue;
   }
 }

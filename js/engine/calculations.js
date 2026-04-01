@@ -11,6 +11,12 @@
  *   - Review intervals clamped to minimum 1 day
  */
 
+// ─── Score Weights ───────────────────────────────────────────────────────────
+const MASTERY_WEIGHTS  = { accuracy: 0.35, confidence: 0.25, difficulty: 0.15, coverage: 0.15, recency: 0.10 };
+const WEAKNESS_WEIGHTS = { accuracy: 0.30, confidence: 0.20, difficulty: 0.15, decay: 0.15, mistakes: 0.10, baseline: 0.10 };
+const PRIORITY_WEIGHTS = { weakness: 0.40, urgency: 0.25, examWeight: 0.15, foundational: 0.10, neglect: 0.10 };
+const RECENCY_DECAY_DAYS = 30;
+
 // ─── Mastery Score (0–100) ───────────────────────────────────────────────────
 /**
  * Measures how well a topic is learned.
@@ -36,19 +42,20 @@ function computeMasteryScore({ accuracy, confidence, difficulty, lastStudiedDate
   const diff   = difficulty != null ? clamp(difficulty, 1, 5) : 3;
   const cov    = coverageRatio != null ? clamp(coverageRatio, 0, 1) : 0;
 
-  // Recency: decay over 30 days. 0 days since study → recency=1. 30+ days → recency=0.
+  // Recency: decay over RECENCY_DECAY_DAYS. 0 days since study → recency=1. 30+ days → recency=0.
   let recency = 0;
   if (lastStudiedDate) {
-    const daysSince = daysBetween(lastStudiedDate, todayISO());
-    recency = clamp(1 - daysSince / 30, 0, 1);
+    const daysSince = Math.max(0, daysBetween(lastStudiedDate, todayISO()));
+    recency = clamp(1 - daysSince / RECENCY_DECAY_DAYS, 0, 1);
   }
 
+  const W = MASTERY_WEIGHTS;
   const raw =
-    acc              * 0.35 +
-    (conf / 5)       * 0.25 +
-    (1 - diff / 5)   * 0.15 +
-    cov              * 0.15 +
-    recency          * 0.10;
+    acc              * W.accuracy +
+    (conf / 5)       * W.confidence +
+    (1 - diff / 5)   * W.difficulty +
+    cov              * W.coverage +
+    recency          * W.recency;
 
   return clamp(roundTo(raw * 100, 1), 0, 100);
 }
@@ -76,21 +83,22 @@ function computeWeaknessScore({ accuracy, confidence, difficulty, lastStudiedDat
   // Recency decay: 0 days since study → decay=0. 30+ days → decay=1.
   let decay = 0.5; // default: assume moderate decay if never studied
   if (lastStudiedDate) {
-    const daysSince = daysBetween(lastStudiedDate, todayISO());
-    decay = clamp(daysSince / 30, 0, 1);
+    const daysSince = Math.max(0, daysBetween(lastStudiedDate, todayISO()));
+    decay = clamp(daysSince / RECENCY_DECAY_DAYS, 0, 1);
   }
 
   // Mistake ratio: normalized against a "high" threshold of 10 mistakes
   const maxMistakes = 10;
   const mistakeRatio = clamp((mistakeCount || 0) / maxMistakes, 0, 1);
 
+  const Ww = WEAKNESS_WEIGHTS;
   const raw =
-    (1 - acc)        * 0.30 +
-    (1 - conf / 5)   * 0.20 +
-    (diff / 5)       * 0.15 +
-    decay            * 0.15 +
-    mistakeRatio     * 0.10 +
-    bw               * 0.10;
+    (1 - acc)        * Ww.accuracy +
+    (1 - conf / 5)   * Ww.confidence +
+    (diff / 5)       * Ww.difficulty +
+    decay            * Ww.decay +
+    mistakeRatio     * Ww.mistakes +
+    bw               * Ww.baseline;
 
   return clamp(roundTo(raw * 100, 1), 0, 100);
 }
@@ -119,8 +127,9 @@ function computePriorityScore({ weaknessScore, nextReviewDate, examWeight, isFou
     urgency = overdue > 0 ? clamp(overdue / 30, 0, 1) : 0;
   }
 
-  // Exam weight normalized (max exam weight is ~0.09, min ~0.03)
-  const examW = clamp(examWeight / 0.09, 0, 1);
+  // Exam weight normalized against max observed weight across FE Civil subjects
+  const MAX_EXAM_WEIGHT = 0.09;
+  const examW = examWeight != null ? clamp(examWeight / MAX_EXAM_WEIGHT, 0, 1) : 0.5;
 
   // Foundational bonus (binary)
   const foundBonus = isFoundational ? 1.0 : 0.0;
@@ -134,12 +143,13 @@ function computePriorityScore({ weaknessScore, nextReviewDate, examWeight, isFou
     neglect = 1.0; // never studied → maximum neglect
   }
 
+  const Wp = PRIORITY_WEIGHTS;
   const raw =
-    ws         * 0.40 +
-    urgency    * 0.25 +
-    examW      * 0.15 +
-    foundBonus * 0.10 +
-    neglect    * 0.10;
+    ws         * Wp.weakness +
+    urgency    * Wp.urgency +
+    examW      * Wp.examWeight +
+    foundBonus * Wp.foundational +
+    neglect    * Wp.neglect;
 
   return clamp(roundTo(raw * 100, 1), 0, 100);
 }
@@ -295,7 +305,7 @@ function avgTimePerQuestion(durationMinutes, questionsAttempted) {
 function detectBurnoutRisk(sessions, lastN = 5, threshold = 4.0) {
   const recent = sessions.slice(-lastN);
   const fatigue = recent.map(s => s.mentalFatigue).filter(f => f != null);
-  if (fatigue.length === 0) return false;
+  if (fatigue.length < Math.min(lastN, 3)) return false; // need at least 3 data points
   const avg = fatigue.reduce((s, v) => s + v, 0) / fatigue.length;
   return avg >= threshold;
 }

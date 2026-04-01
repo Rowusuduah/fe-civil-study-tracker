@@ -4,8 +4,9 @@
 
 function renderSettingsTab() {
   const s = STATE.settings;
-  if (qs('set-exam-date'))     qs('set-exam-date').value    = s.examDate || '2026-04-22';
-  if (qs('set-intense-date'))  qs('set-intense-date').value = s.intensePhaseDate || '2026-04-10';
+  if (qs('set-start-date'))    qs('set-start-date').value   = s.studyStartDate || '';
+  if (qs('set-exam-date'))     qs('set-exam-date').value    = s.examDate || DEFAULT_SETTINGS.examDate;
+  if (qs('set-intense-date'))  qs('set-intense-date').value = s.intensePhaseDate || DEFAULT_SETTINGS.intensePhaseDate;
   if (qs('set-name'))          qs('set-name').value          = s.userProfile?.name || '';
   if (qs('set-weekday-hours')) qs('set-weekday-hours').value = s.weekdayHours ?? 6;
   if (qs('set-weekend-hours')) qs('set-weekend-hours').value = s.weekendHours ?? 12;
@@ -80,6 +81,7 @@ function initSettingsForm() {
 }
 
 function saveSettings_() {
+  const startDate  = qs('set-start-date')?.value;
   const examDate   = qs('set-exam-date')?.value;
   const intenseDate= qs('set-intense-date')?.value;
   const name       = qs('set-name')?.value?.trim() || '';
@@ -94,6 +96,10 @@ function saveSettings_() {
   // Validate
   if (!examDate || !isValidISODate(examDate)) { showToast('Please enter a valid exam date.', 'error'); return; }
   if (examDate < todayISO()) { showToast('Exam date cannot be in the past.', 'error'); return; }
+  if (startDate && !isValidISODate(startDate)) { showToast('Please enter a valid study start date.', 'error'); return; }
+  if (startDate && startDate < todayISO()) { showToast('Study start date cannot be in the past.', 'error'); return; }
+  if (startDate && examDate && startDate >= examDate) { showToast('Study start date must be before the exam date.', 'error'); return; }
+  if (startDate && intenseDate && startDate > intenseDate) { showToast('Study start date must be on or before the intense phase start.', 'error'); return; }
   if (intenseDate && intenseDate >= examDate) { showToast('Intense phase must start before the exam date.', 'error'); return; }
   if (weekdayH < 1 || weekdayH > 20) { showToast('Weekday hours must be 1–20.', 'error'); return; }
   if (weekendH < 1 || weekendH > 24) { showToast('Weekend hours must be 1–24.', 'error'); return; }
@@ -104,8 +110,9 @@ function saveSettings_() {
 
   STATE.settings = {
     ...STATE.settings,
+    studyStartDate: startDate || null,
     examDate,
-    intensePhaseDate: intenseDate || '2026-04-10',
+    intensePhaseDate: intenseDate || DEFAULT_SETTINGS.intensePhaseDate,
     weekdayHours: weekdayH,
     weekendHours: weekendH,
     intenseHours: intenseH,
