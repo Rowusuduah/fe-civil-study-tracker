@@ -33,15 +33,15 @@ const BACKUP_VERSION = 1;
 const DEFAULT_SETTINGS = {
   studyStartDate: null,
   examDate: '2026-04-22',
-  intensePhaseDate: '2026-04-10',
-  weekdayHours: 6,
+  intensePhaseDate: '2026-04-03',
+  weekdayHours: 10,
   weekendHours: 12,
   intenseHours: 14,
-  revisionIntervals: [1, 3, 7, 14, 30],
+  revisionIntervals: [1, 3, 7, 14],
   masteryThreshold: 75,       // score >= this = mastered
   weaknessThreshold: 50,      // score >= this = weak (needs attention)
-  neglectDays: 14,            // days without study = neglected
-  finalSprintDays: 12,        // last N days = intensive review only
+  neglectDays: 7,             // days without study = neglected (tighter for crunch)
+  finalSprintDays: 7,         // last 7 days = intensive review only
   catchUpMaxDays: 7,          // spread catch-up over this many days
   dailyHardCap: 14,           // absolute max hours per day (safety)
   userProfile: {

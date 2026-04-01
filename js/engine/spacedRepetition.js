@@ -4,8 +4,8 @@
  */
 
 /** Base review intervals in days (index = review count) */
-const BASE_INTERVALS = [1, 3, 7, 14, 30];
-const MAX_INTERVAL = 30; // days — cap interval at 30 days
+const BASE_INTERVALS = [1, 2, 5, 10, 14];
+const MAX_INTERVAL = 14; // days — cap interval at 14 days for crunch timeline
 
 // ─── Interval Calculation ─────────────────────────────────────────────────────
 
