@@ -85,12 +85,12 @@ function saveSettings_() {
   const examDate   = qs('set-exam-date')?.value;
   const intenseDate= qs('set-intense-date')?.value;
   const name       = qs('set-name')?.value?.trim() || '';
-  const weekdayH   = parseInt(qs('set-weekday-hours')?.value || 6);
-  const weekendH   = parseInt(qs('set-weekend-hours')?.value || 12);
-  const intenseH   = parseInt(qs('set-intense-hours')?.value || 14);
-  const dailyCap   = parseInt(qs('set-daily-cap')?.value || 14);
-  const neglect    = parseInt(qs('set-neglect-days')?.value || 14);
-  const sprint     = parseInt(qs('set-final-sprint')?.value || 12);
+  const weekdayH   = parseInt(qs('set-weekday-hours')?.value || DEFAULT_SETTINGS.weekdayHours, 10);
+  const weekendH   = parseInt(qs('set-weekend-hours')?.value || DEFAULT_SETTINGS.weekendHours, 10);
+  const intenseH   = parseInt(qs('set-intense-hours')?.value || DEFAULT_SETTINGS.intenseHours, 10);
+  const dailyCap   = parseInt(qs('set-daily-cap')?.value || DEFAULT_SETTINGS.dailyHardCap, 10);
+  const neglect    = parseInt(qs('set-neglect-days')?.value || DEFAULT_SETTINGS.neglectDays, 10);
+  const sprint     = parseInt(qs('set-final-sprint')?.value || DEFAULT_SETTINGS.finalSprintDays, 10);
   const intervalsRaw = qs('set-intervals')?.value || '1,3,7,14,30';
 
   // Validate
@@ -106,7 +106,7 @@ function saveSettings_() {
   if (weekendH < 1 || weekendH > 24) { showToast('Weekend hours must be 1–24.', 'error'); return; }
 
   // Parse intervals
-  const intervals = intervalsRaw.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1);
+  const intervals = intervalsRaw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1);
   if (intervals.length === 0) { showToast('Please enter at least one valid revision interval.', 'error'); return; }
 
   STATE.settings = {

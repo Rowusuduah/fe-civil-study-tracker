@@ -96,9 +96,9 @@ function buildSubjectTree(savedSubjects) {
         return {
           ...topic,
           coverageStatus: savedTopic.coverageStatus || 'not_started',
-          totalTimeMinutes: savedTopic.totalTimeMinutes || 0,
+          totalTimeMinutes: savedTopic.totalTimeMinutes ?? 0,
           lastStudiedDate: savedTopic.lastStudiedDate || null,
-          masteryScore: savedTopic.masteryScore || null,
+          masteryScore: savedTopic.masteryScore ?? null,
           subtopics: topic.subtopics.map(sub => {
             const savedSub = (savedTopic.subtopics || []).find(s => s.id === sub.id) || {};
             return {
@@ -106,17 +106,17 @@ function buildSubjectTree(savedSubjects) {
               subjectId: subject.id,
               topicId: topic.id,
               coverageStatus: savedSub.coverageStatus || 'not_started',
-              totalTimeMinutes: savedSub.totalTimeMinutes || 0,
+              totalTimeMinutes: savedSub.totalTimeMinutes ?? 0,
               lastStudiedDate: savedSub.lastStudiedDate || null,
               lastRevisedDate: savedSub.lastRevisedDate || null,
-              avgConfidence: savedSub.avgConfidence || null,
-              avgAccuracy: savedSub.avgAccuracy || null,
-              avgDifficulty: savedSub.avgDifficulty || null,
-              weaknessScore: savedSub.weaknessScore || null,
-              masteryScore: savedSub.masteryScore || null,
-              priorityScore: savedSub.priorityScore || null,
-              reviewInterval: savedSub.reviewInterval || 1,
-              reviewCount: savedSub.reviewCount || 0,
+              avgConfidence: savedSub.avgConfidence ?? null,
+              avgAccuracy: savedSub.avgAccuracy ?? null,
+              avgDifficulty: savedSub.avgDifficulty ?? null,
+              weaknessScore: savedSub.weaknessScore ?? null,
+              masteryScore: savedSub.masteryScore ?? null,
+              priorityScore: savedSub.priorityScore ?? null,
+              reviewInterval: savedSub.reviewInterval ?? 1,
+              reviewCount: savedSub.reviewCount ?? 0,
               nextReviewDate: savedSub.nextReviewDate || null,
               mistakeCount: savedSub.mistakeCount ?? 0
             };
