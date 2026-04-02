@@ -420,7 +420,7 @@ function renderSessionList() {
   }).join('');
 
   if (sessions.length > 50) {
-    el.innerHTML += `<p class="empty-state">Showing 50 of ${sessions.length} sessions.</p>`;
+    el.insertAdjacentHTML('beforeend', `<p class="empty-state">Showing 50 of ${sessions.length} sessions.</p>`);
   }
 }
 
