@@ -196,7 +196,7 @@ select.form-input {
 .form-hint { font-size:var(--text-xs); color:var(--muted); }
 .input-with-btn { display:flex; gap:.4rem; align-items:stretch; }
 .input-with-btn .form-input { flex:1; min-width:0; }
-.input-with-btn .btn { white-space:nowrap; padding:.45rem .7rem; font-size:var(--text-xs); border:1px solid var(--border); border-radius:var(--radius); background:var(--blue); color:#fff; cursor:pointer; }
+.input-with-btn .now-btn { flex-shrink:0; }
 .form-grid   { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; }
 .form-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
 .form-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; }
