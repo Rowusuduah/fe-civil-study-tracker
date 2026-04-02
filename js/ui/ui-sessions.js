@@ -316,9 +316,9 @@ function updateSubjectFromSession(session, oldSession) {
 
 // ─── Reset Form ───────────────────────────────────────────────────────────────
 function resetSessionForm() {
-  qs('session-id').value = '';
-  qs('session-form-title').textContent = 'New Session';
-  qs('session-form').reset();
+  if (qs('session-id'))         qs('session-id').value = '';
+  if (qs('session-form-title')) qs('session-form-title').textContent = 'New Session';
+  if (qs('session-form'))       qs('session-form').reset();
   setDateToToday('session-date');
 
   // Reset type selector
@@ -335,7 +335,7 @@ function resetSessionForm() {
   hide(qs('mismatch-warning'));
   updateSessionTypeVisibility();
   populateTopicDropdown('session-topic', '');
-  qs('session-subtopic').innerHTML = '<option value="">All subtopics</option>';
+  if (qs('session-subtopic')) qs('session-subtopic').innerHTML = '<option value="">All subtopics</option>';
 }
 
 // ─── Edit / Delete ────────────────────────────────────────────────────────────
@@ -343,21 +343,21 @@ function editSession(id) {
   const session = STATE.sessions.find(s => s.id === id);
   if (!session) return;
 
-  qs('session-id').value       = id;
-  qs('session-form-title').textContent = 'Edit Session';
-  qs('session-date').value     = session.date || '';
-  qs('session-start').value    = session.startTime || '';
-  qs('session-end').value      = session.endTime || '';
-  qs('session-duration').value = session.durationMinutes || '';
-  qs('session-notes').value    = session.notes || '';
-  qs('session-resource').value = session.resource || '';
-  qs('session-followup').value = session.followUpDate || '';
-  qs('session-flagged').checked = session.flaggedForReview || false;
-  qs('session-rewatch').checked = session.rewatchNeeded || false;
-  qs('session-q-attempted').value = session.questionsAttempted || '';
-  qs('session-q-correct').value   = session.questionsCorrect || '';
-  qs('session-q-incorrect').value = session.questionsIncorrect || '';
-  qs('session-q-guessed').value   = session.guessedCount || '';
+  if (qs('session-id'))          qs('session-id').value       = id;
+  if (qs('session-form-title'))  qs('session-form-title').textContent = 'Edit Session';
+  if (qs('session-date'))        qs('session-date').value     = session.date || '';
+  if (qs('session-start'))       qs('session-start').value    = session.startTime || '';
+  if (qs('session-end'))         qs('session-end').value      = session.endTime || '';
+  if (qs('session-duration'))    qs('session-duration').value = session.durationMinutes || '';
+  if (qs('session-notes'))       qs('session-notes').value    = session.notes || '';
+  if (qs('session-resource'))    qs('session-resource').value = session.resource || '';
+  if (qs('session-followup'))    qs('session-followup').value = session.followUpDate || '';
+  if (qs('session-flagged'))     qs('session-flagged').checked = session.flaggedForReview || false;
+  if (qs('session-rewatch'))     qs('session-rewatch').checked = session.rewatchNeeded || false;
+  if (qs('session-q-attempted')) qs('session-q-attempted').value = session.questionsAttempted || '';
+  if (qs('session-q-correct'))   qs('session-q-correct').value   = session.questionsCorrect || '';
+  if (qs('session-q-incorrect')) qs('session-q-incorrect').value = session.questionsIncorrect || '';
+  if (qs('session-q-guessed'))   qs('session-q-guessed').value   = session.guessedCount || '';
 
   // Set type
   if (qs('session-type')) qs('session-type').value = session.type;
@@ -381,7 +381,7 @@ function editSession(id) {
   show(qs('session-cancel-btn'));
   updateSessionTypeVisibility();
   switchTab('tab-sessions');
-  qs('session-date').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  qs('session-date')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function deleteSession(id) {
