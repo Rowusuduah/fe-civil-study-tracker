@@ -36,6 +36,18 @@ function renderRevisionDueItems() {
   }
 
   el.innerHTML = due.map(item => revItemHTML(item)).join('');
+
+  // Event delegation for revision due list (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'mark-revision-done') {
+        markRevisionDone(target.dataset.id);
+      }
+    });
+  }
 }
 
 // ─── Upcoming ─────────────────────────────────────────────────────────────────
@@ -53,6 +65,18 @@ function renderRevisionUpcoming() {
   }
 
   el.innerHTML = upcoming.slice(0, 15).map(item => revItemHTML(item)).join('');
+
+  // Event delegation for upcoming revision list (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'mark-revision-done') {
+        markRevisionDone(target.dataset.id);
+      }
+    });
+  }
 }
 
 function revItemHTML(item) {
@@ -67,7 +91,7 @@ function revItemHTML(item) {
         ${item.lastPerformance != null ? ` · Accuracy: ${fmtPct(item.lastPerformance)}` : ''}
       </div>
     </div>
-    <button class="btn btn-sm btn-ghost" onclick="markRevisionDone('${escapeHTML(item.subtopicId)}')">Done ✓</button>
+    <button class="btn btn-sm btn-ghost" data-action="mark-revision-done" data-id="${escapeHTML(item.subtopicId)}">Done ✓</button>
   </div>`;
 }
 
@@ -119,14 +143,28 @@ function renderMistakeList() {
         </div>
       </div>
       <div class="item-actions">
-        ${!m.resolved ? `<button class="item-btn" onclick="resolveMistake('${escapeHTML(m.id)}')">✓ Resolve</button>` : '<span class="badge badge-green">Resolved</span>'}
-        <button class="item-btn del" onclick="deleteMistake('${escapeHTML(m.id)}')">Del</button>
+        ${!m.resolved ? `<button class="item-btn" data-action="resolve-mistake" data-id="${escapeHTML(m.id)}">✓ Resolve</button>` : '<span class="badge badge-green">Resolved</span>'}
+        <button class="item-btn del" data-action="delete-mistake" data-id="${escapeHTML(m.id)}">Del</button>
       </div>
     </div>`;
   }).join('');
 
   if (unresolved.length > 0) {
     el.insertAdjacentHTML('afterbegin', `<div class="badge badge-red" style="margin-bottom:.5rem">${unresolved.length} unresolved</div>`);
+  }
+
+  // Event delegation for mistake list actions (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'resolve-mistake') {
+        resolveMistake(target.dataset.id);
+      } else if (target.dataset.action === 'delete-mistake') {
+        deleteMistake(target.dataset.id);
+      }
+    });
   }
 }
 

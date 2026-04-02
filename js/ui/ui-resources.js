@@ -162,9 +162,23 @@ function renderResourceList() {
           <div class="text-xs text-muted" style="margin-top:.1rem">${prog}% complete</div>` : ''}
       </div>
       <div class="item-actions">
-        <button class="item-btn" onclick="editResource('${escapeHTML(r.id)}')">Edit</button>
-        <button class="item-btn del" onclick="deleteResource('${escapeHTML(r.id)}')">Del</button>
+        <button class="item-btn" data-action="edit-resource" data-id="${escapeHTML(r.id)}">Edit</button>
+        <button class="item-btn del" data-action="delete-resource" data-id="${escapeHTML(r.id)}">Del</button>
       </div>
     </div>`;
   }).join('');
+
+  // Event delegation for resource list actions (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'edit-resource') {
+        editResource(target.dataset.id);
+      } else if (target.dataset.action === 'delete-resource') {
+        deleteResource(target.dataset.id);
+      }
+    });
+  }
 }

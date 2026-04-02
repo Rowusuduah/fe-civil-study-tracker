@@ -257,12 +257,25 @@ function renderRevisionDueList() {
         <div class="rev-name">${escapeHTML(item.name)}</div>
         <div class="rev-meta">${escapeHTML(item.subjectName)} · ${item.overdueDays > 0 ? `${item.overdueDays}d overdue` : 'Due today'}</div>
       </div>
-      <button class="btn btn-sm btn-ghost" onclick="switchTab('tab-revision')">Review</button>
+      <button class="btn btn-sm btn-ghost" data-action="switch-tab" data-tab="tab-revision">Review</button>
     </div>
   `).join('');
 
   if (due.length > 6) {
-    listEl.insertAdjacentHTML('beforeend', `<div class="empty-state" style="padding:.5rem">+${due.length - 6} more — <a href="#" onclick="switchTab('tab-revision');return false">See all</a></div>`);
+    listEl.insertAdjacentHTML('beforeend', `<div class="empty-state" style="padding:.5rem">+${due.length - 6} more — <a href="#" data-action="switch-tab" data-tab="tab-revision">See all</a></div>`);
+  }
+
+  // Event delegation for dashboard revision list actions (guard against duplicate binding)
+  if (!listEl._delegated) {
+    listEl._delegated = true;
+    listEl.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'switch-tab') {
+        e.preventDefault();
+        switchTab(target.dataset.tab);
+      }
+    });
   }
 }
 
