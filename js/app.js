@@ -8,7 +8,7 @@
 
 // ─── Google Drive Config ──────────────────────────────────────────────────────
 // Set GDRIVE_CLIENT_ID to your Google Cloud OAuth 2.0 Client ID to enable sync.
-const GDRIVE_CLIENT_ID = '';
+const GDRIVE_CLIENT_ID = '394124622094-3cj4ho2ipp3m6pm0un09tg9knelhfqtu.apps.googleusercontent.com';
 const GDRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.file';
 const GDRIVE_FILENAME  = 'FECivil_Backup.json';
 
