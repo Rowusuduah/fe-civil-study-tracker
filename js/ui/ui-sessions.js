@@ -248,15 +248,19 @@ function saveSession() {
     createdAt: isEdit ? undefined : new Date().toISOString()
   };
 
+  let oldSession = null;
   if (isEdit) {
     const idx = STATE.sessions.findIndex(s => s.id === sessionId);
-    if (idx >= 0) STATE.sessions[idx] = { ...STATE.sessions[idx], ...session };
+    if (idx >= 0) {
+      oldSession = STATE.sessions[idx];
+      STATE.sessions[idx] = { ...oldSession, ...session };
+    }
   } else {
     STATE.sessions.unshift(session);
   }
 
-  // Update subject progress
-  updateSubjectFromSession(session);
+  // Update subject progress (subtract old duration if editing)
+  updateSubjectFromSession(session, oldSession);
 
   persistSessions();
   persistSubjects();
@@ -266,19 +270,21 @@ function saveSession() {
   showToast(isEdit ? 'Session updated.' : 'Session saved!', 'success');
 }
 
-function updateSubjectFromSession(session) {
+function updateSubjectFromSession(session, oldSession) {
   const subj = STATE.computed.subjectMap[session.subjectId];
   if (!subj) return;
 
+  // Subtract old duration if editing, then add new
+  const durationDelta = session.durationMinutes - (oldSession ? oldSession.durationMinutes : 0);
   subj.lastStudiedDate = session.date > (subj.lastStudiedDate || '') ? session.date : subj.lastStudiedDate;
-  subj.totalTimeMinutes = (subj.totalTimeMinutes || 0) + session.durationMinutes;
+  subj.totalTimeMinutes = Math.max(0, (subj.totalTimeMinutes || 0) + durationDelta);
 
   // Update subtopic if specified
   if (session.subtopicId) {
     const sub = STATE.computed.subtopicMap[session.subtopicId];
     if (sub) {
       sub.lastStudiedDate = session.date > (sub.lastStudiedDate || '') ? session.date : sub.lastStudiedDate;
-      sub.totalTimeMinutes = (sub.totalTimeMinutes || 0) + session.durationMinutes;
+      sub.totalTimeMinutes = Math.max(0, (sub.totalTimeMinutes || 0) + durationDelta);
       if (sub.coverageStatus === 'not_started') sub.coverageStatus = 'in_progress';
 
       const accuracy = safeAccuracy(session.questionsCorrect, session.questionsAttempted);
