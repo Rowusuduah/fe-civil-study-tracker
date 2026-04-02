@@ -72,8 +72,8 @@ function saveAssessment() {
 }
 
 function resetAssessmentForm() {
-  qs('assessment-id').value = '';
-  qs('assessment-form-title').textContent = 'Log Mock Exam';
+  if (qs('assessment-id'))         qs('assessment-id').value = '';
+  if (qs('assessment-form-title')) qs('assessment-form-title').textContent = 'Log Mock Exam';
   qs('assessment-form')?.reset();
   setDateToToday('assessment-date');
   buildSectionScoreInputs();

@@ -311,13 +311,6 @@ function renderReadinessForecast() {
     return;
   }
 
-  // Sample weekly readiness checkpoints
-  const weekPoints = {};
-  sortedSessions.forEach(s => {
-    const week = getMondayOfWeek(s.date);
-    weekPoints[week] = STATE.computed.readinessScore; // simplified: use current readiness
-  });
-
   // Simple trend display
   const current = STATE.computed.readinessScore;
   const daysLeft = STATE.computed.daysUntilExam;
@@ -347,8 +340,3 @@ function renderReadinessForecast() {
     </div>`;
 }
 
-// ─── Range Change Handler ─────────────────────────────────────────────────────
-function initAnalyticsRange() {
-  const rangeEl = qs('analytics-range');
-  if (rangeEl) rangeEl.addEventListener('change', renderAnalyticsTab);
-}

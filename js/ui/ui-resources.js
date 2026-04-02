@@ -79,8 +79,8 @@ function saveResource() {
 }
 
 function resetResourceForm() {
-  qs('resource-id').value = '';
-  qs('resource-form-title').textContent = 'Add Resource';
+  if (qs('resource-id'))         qs('resource-id').value = '';
+  if (qs('resource-form-title')) qs('resource-form-title').textContent = 'Add Resource';
   qs('resource-form')?.reset();
   hide(qs('resource-cancel-btn'));
   updateResourceFormVisibility();

@@ -360,6 +360,7 @@ async function _gFetch(url, options = {}, timeoutMs = 15000) {
 
 async function _gFindFile() {
   const res  = await _gFetch(`https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FILENAME}'&fields=files(id)&spaces=drive`);
+  if (!res.ok) { console.error('[drive] Find file failed:', res.status); return null; }
   const data = await res.json();
   return data.files?.[0]?.id || null;
 }
@@ -370,6 +371,7 @@ async function _gCreateFile(content) {
   form.append('metadata', new Blob([meta], { type: 'application/json' }));
   form.append('media',    new Blob([content], { type: 'application/json' }));
   const res  = await _gFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('Drive create failed: ' + res.status);
   const data = await res.json();
   return data.id;
 }
@@ -407,6 +409,7 @@ function loadFromDrive() {
     const fileId = _gdriveFileId || await _gFindFile();
     if (!fileId || !isValidDriveId(fileId)) { setDriveStatus('No backup found on Drive.', 'var(--orange)'); return; }
     const res    = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!res.ok) { setDriveStatus('Load failed: HTTP ' + res.status, 'var(--red)'); return; }
     const data   = await res.json();
     const result = restoreBackup(data);
     if (result.ok) {
@@ -437,5 +440,3 @@ function autoSyncDrive() {
     setTimeout(loadFromDrive, 1000);
   }
 }
-
-function autoLoadFromDrive() { loadFromDrive(); }

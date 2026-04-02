@@ -154,32 +154,6 @@ function computePriorityScore({ weaknessScore, nextReviewDate, examWeight, isFou
   return clamp(roundTo(raw * 100, 1), 0, 100);
 }
 
-// ─── Readiness Score (0–100) ─────────────────────────────────────────────────
-/**
- * Overall exam readiness — weighted average of subject mastery scores
- * using NCEES exam weight allocations.
- *
- * Formula: Σ(masteryScore[i] × examWeight[i])
- * Exam weights sum to 1.0, so this is a proper weighted average.
- */
-function computeReadinessScore(subjects) {
-  const items = subjects
-    .filter(s => s.masteryScore != null)
-    .map(s => ({ value: s.masteryScore, weight: s.examWeight }));
-
-  if (items.length === 0) return null;
-
-  const totalWeight = items.reduce((s, i) => s + i.weight, 0);
-  if (totalWeight === 0) return null;
-
-  // Scale to full weight (if some subjects have no mastery yet, readiness is proportionally lower)
-  const fullWeight = subjects.reduce((s, sub) => s + sub.examWeight, 0); // should be ~1.0
-  const weightedSum = items.reduce((s, i) => s + i.value * i.weight, 0);
-
-  // Readiness is the weighted sum divided by total possible weight
-  return clamp(roundTo(weightedSum / fullWeight, 1), 0, 100);
-}
-
 // ─── Accuracy ────────────────────────────────────────────────────────────────
 /**
  * accuracy = correct / attempted
