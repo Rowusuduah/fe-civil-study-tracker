@@ -6,15 +6,15 @@ function renderSettingsTab() {
   const s = STATE.settings;
   if (qs('set-start-date'))    qs('set-start-date').value   = s.studyStartDate || '';
   if (qs('set-exam-date'))     qs('set-exam-date').value    = s.examDate || DEFAULT_SETTINGS.examDate;
-  if (qs('set-intense-date'))  qs('set-intense-date').value = s.intensePhaseDate || DEFAULT_SETTINGS.intensePhaseDate;
+  if (qs('set-intense-date'))  qs('set-intense-date').value = s.intensePhaseDate || '';
   if (qs('set-name'))          qs('set-name').value          = s.userProfile?.name || '';
-  if (qs('set-weekday-hours')) qs('set-weekday-hours').value = s.weekdayHours ?? 6;
-  if (qs('set-weekend-hours')) qs('set-weekend-hours').value = s.weekendHours ?? 12;
-  if (qs('set-intense-hours')) qs('set-intense-hours').value = s.intenseHours ?? 14;
-  if (qs('set-daily-cap'))     qs('set-daily-cap').value     = s.dailyHardCap ?? 14;
-  if (qs('set-intervals'))     qs('set-intervals').value     = (s.revisionIntervals || [1,3,7,14,30]).join(',');
-  if (qs('set-neglect-days'))  qs('set-neglect-days').value  = s.neglectDays ?? 14;
-  if (qs('set-final-sprint'))  qs('set-final-sprint').value  = s.finalSprintDays ?? 12;
+  if (qs('set-weekday-hours')) qs('set-weekday-hours').value = s.weekdayHours ?? DEFAULT_SETTINGS.weekdayHours;
+  if (qs('set-weekend-hours')) qs('set-weekend-hours').value = s.weekendHours ?? DEFAULT_SETTINGS.weekendHours;
+  if (qs('set-intense-hours')) qs('set-intense-hours').value = s.intenseHours ?? DEFAULT_SETTINGS.intenseHours;
+  if (qs('set-daily-cap'))     qs('set-daily-cap').value     = s.dailyHardCap ?? DEFAULT_SETTINGS.dailyHardCap;
+  if (qs('set-intervals'))     qs('set-intervals').value     = (s.revisionIntervals || DEFAULT_SETTINGS.revisionIntervals).join(',');
+  if (qs('set-neglect-days'))  qs('set-neglect-days').value  = s.neglectDays ?? DEFAULT_SETTINGS.neglectDays;
+  if (qs('set-final-sprint'))  qs('set-final-sprint').value  = s.finalSprintDays ?? DEFAULT_SETTINGS.finalSprintDays;
 
   // Theme buttons
   const isDark = STATE.theme === 'dark' || !document.body.classList.contains('light');
@@ -112,7 +112,7 @@ function saveSettings_() {
     ...STATE.settings,
     studyStartDate: startDate || null,
     examDate,
-    intensePhaseDate: intenseDate || DEFAULT_SETTINGS.intensePhaseDate,
+    intensePhaseDate: intenseDate || null,
     weekdayHours: weekdayH,
     weekendHours: weekendH,
     intenseHours: intenseH,

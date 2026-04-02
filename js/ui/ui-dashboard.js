@@ -168,7 +168,7 @@ function renderTodayProgress() {
   const pct        = planned > 0 ? clamp(todayHours / planned, 0, 1) : 0;
   const color      = pct >= 1 ? 'green' : pct >= 0.5 ? '' : 'orange';
 
-  const phase = todayISO() >= STATE.settings.intensePhaseDate ? 'Intense Phase' : 'Normal Phase';
+  const phase = !STATE.settings.intensePhaseDate || todayISO() >= STATE.settings.intensePhaseDate ? 'Intense Phase' : 'Normal Phase';
 
   el.innerHTML = `
     <div class="today-stats">
