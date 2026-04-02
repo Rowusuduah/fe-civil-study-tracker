@@ -210,6 +210,10 @@ function saveSession() {
 
   const attempted = parseInt(qs('session-q-attempted')?.value || 0);
   const correct   = parseInt(qs('session-q-correct')?.value || 0);
+  if (correct > attempted) {
+    showToast('Correct questions cannot exceed attempted.', 'error');
+    return;
+  }
   const incorrect = parseInt(qs('session-q-incorrect')?.value || 0);
   const guessed   = parseInt(qs('session-q-guessed')?.value || 0);
   const confBefore= clampRating(qs('session-confidence-before')?.value);
