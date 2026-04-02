@@ -219,6 +219,43 @@ function resetAllData() {
   saveTheme(theme);
 }
 
+// ─── CSV Export ──────────────────────────────────────────────────────────────
+
+function exportSessionsCSV() {
+  const sessions = loadSessions();
+  if (!sessions.length) { alert('No sessions to export.'); return; }
+  const subjects = loadSubjects();
+  const subMap = {};
+  subjects.forEach(s => { subMap[s.id] = s.shortName || s.name || s.id; });
+
+  const headers = ['Date','Type','Subject','Duration (min)','Start','End',
+                   'Confidence Before','Confidence After','Difficulty','Fatigue',
+                   'Q Attempted','Q Correct','Accuracy %','Notes'];
+  const rows = sessions.map(s => {
+    const acc = s.questionsAttempted > 0
+      ? ((s.questionsCorrect / s.questionsAttempted) * 100).toFixed(1)
+      : '';
+    return [
+      csvField(s.date),
+      csvField(s.type || ''),
+      csvField(subMap[s.subjectId] || s.subjectId || ''),
+      csvField(s.durationMinutes ?? ''),
+      csvField(s.startTime || ''),
+      csvField(s.endTime || ''),
+      csvField(s.confidenceBefore ?? ''),
+      csvField(s.confidenceAfter ?? ''),
+      csvField(s.perceivedDifficulty ?? ''),
+      csvField(s.mentalFatigue ?? ''),
+      csvField(s.questionsAttempted ?? ''),
+      csvField(s.questionsCorrect ?? ''),
+      csvField(acc),
+      csvField(s.notes || ''),
+    ].join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  downloadFile(csv, `FECivil_Sessions_${todayISO()}.csv`, 'text/csv');
+}
+
 /** Full factory reset including theme */
 function factoryReset() {
   BACKUP_KEYS.forEach(k => localStorage.removeItem(k));

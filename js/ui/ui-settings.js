@@ -36,6 +36,11 @@ function initSettingsForm() {
     setBackupStatus('Backup exported successfully.', 'success');
   });
 
+  qs('btn-export-csv')?.addEventListener('click', () => {
+    exportSessionsCSV();
+    setBackupStatus('Sessions CSV exported.', 'success');
+  });
+
   const importInput = qs('import-backup-file');
   if (importInput) {
     importInput.addEventListener('change', e => {

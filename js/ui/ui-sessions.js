@@ -430,14 +430,28 @@ function renderSessionList() {
         </div>
       </div>
       <div class="item-actions">
-        <button class="item-btn" onclick="editSession('${escapeHTML(s.id)}')">Edit</button>
-        <button class="item-btn del" onclick="deleteSession('${escapeHTML(s.id)}')">Del</button>
+        <button class="item-btn" data-action="edit-session" data-id="${escapeHTML(s.id)}">Edit</button>
+        <button class="item-btn del" data-action="delete-session" data-id="${escapeHTML(s.id)}">Del</button>
       </div>
     </div>`;
   }).join('');
 
   if (sessions.length > 50) {
     el.insertAdjacentHTML('beforeend', `<p class="empty-state">Showing 50 of ${sessions.length} sessions.</p>`);
+  }
+
+  // Event delegation for session list actions (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'edit-session') {
+        editSession(target.dataset.id);
+      } else if (target.dataset.action === 'delete-session') {
+        deleteSession(target.dataset.id);
+      }
+    });
   }
 }
 

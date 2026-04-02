@@ -140,11 +140,25 @@ function renderAssessmentList() {
         </div>
       </div>
       <div class="item-actions">
-        <button class="item-btn" onclick="editAssessment('${escapeHTML(a.id)}')">Edit</button>
-        <button class="item-btn del" onclick="deleteAssessment('${escapeHTML(a.id)}')">Del</button>
+        <button class="item-btn" data-action="edit-assessment" data-id="${escapeHTML(a.id)}">Edit</button>
+        <button class="item-btn del" data-action="delete-assessment" data-id="${escapeHTML(a.id)}">Del</button>
       </div>
     </div>`;
   }).join('');
+
+  // Event delegation for assessment list actions (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'edit-assessment') {
+        editAssessment(target.dataset.id);
+      } else if (target.dataset.action === 'delete-assessment') {
+        deleteAssessment(target.dataset.id);
+      }
+    });
+  }
 }
 
 // ─── Score Trend Chart ────────────────────────────────────────────────────────

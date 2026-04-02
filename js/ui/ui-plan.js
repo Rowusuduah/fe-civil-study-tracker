@@ -98,13 +98,25 @@ function renderCalendar() {
 
     const hoursText = plan ? `${roundTo(actual, 1)}/${plan.plannedHours}h` : '';
 
-    html += `<div class="${classes}" data-date="${iso}" title="${iso}${plan ? ` — ${hoursText}` : ''}" onclick="showDayDetail('${iso}')">
+    html += `<div class="${classes}" data-date="${iso}" data-action="show-day" title="${iso}${plan ? ` — ${hoursText}` : ''}">
       <span>${day}</span>
       ${plan ? '<div class="cal-dot"></div>' : ''}
     </div>`;
   }
 
   grid.innerHTML = html;
+
+  // Event delegation for calendar day clicks (guard against duplicate binding)
+  if (!grid._delegated) {
+    grid._delegated = true;
+    grid.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'show-day') {
+        showDayDetail(target.dataset.date);
+      }
+    });
+  }
 }
 
 function calNav(dir) {

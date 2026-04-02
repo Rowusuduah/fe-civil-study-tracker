@@ -279,6 +279,33 @@ function average(arr) {
   return valid.reduce((s, v) => s + v, 0) / valid.length;
 }
 
+// ─── Debounce ────────────────────────────────────────────────────────────────
+
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+// ─── CSV Helpers ─────────────────────────────────────────────────────────────
+
+function csvField(v) {
+  const s = String(v == null ? '' : v).replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 if (typeof module !== 'undefined') {
@@ -290,6 +317,7 @@ if (typeof module !== 'undefined') {
     scoreColorClass, tierColorClass,
     qs, el, show, hide, toggleHidden,
     isValidISODate, clampRating,
-    weightedAverage, average
+    weightedAverage, average,
+    debounce, csvField, downloadFile
   };
 }

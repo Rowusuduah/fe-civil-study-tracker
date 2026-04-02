@@ -53,6 +53,22 @@ function renderSubjectTree() {
   }
 
   el.innerHTML = subjects.map(subj => renderSubjectRow(subj)).join('');
+
+  // Event delegation for subject tree actions (guard against duplicate binding)
+  if (!el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      if (target.dataset.action === 'toggle-subject') {
+        toggleSubject(target.dataset.id);
+      } else if (target.dataset.action === 'toggle-topic') {
+        toggleTopic(target.dataset.id);
+      } else if (target.dataset.action === 'cycle-subtopic') {
+        cycleSubtopicStatus(target.dataset.id, target.dataset.subjectId);
+      }
+    });
+  }
 }
 
 function renderSubjectRow(subj) {
@@ -67,7 +83,7 @@ function renderSubjectRow(subj) {
 
   return `
     <div class="subject-row" id="subj-row-${escapeHTML(subj.id)}">
-      <div class="subject-header" onclick="toggleSubject('${escapeHTML(subj.id)}')">
+      <div class="subject-header" data-action="toggle-subject" data-id="${escapeHTML(subj.id)}">
         <span class="subject-toggle ${isOpen ? 'open' : ''}">▶</span>
         <span class="subject-icon">${escapeHTML(subj.icon || '◈')}</span>
         <div style="flex:1;min-width:0">
@@ -102,7 +118,7 @@ function renderTopicRow(subj, topic) {
 
   return `
     <div>
-      <div class="topic-row" onclick="toggleTopic('${escapeHTML(topicKey)}')">
+      <div class="topic-row" data-action="toggle-topic" data-id="${escapeHTML(topicKey)}">
         <div style="display:flex;align-items:center;gap:.5rem">
           <span style="color:var(--muted);font-size:.7rem">${isOpen ? '▼' : '▶'}</span>
           <span>${escapeHTML(topic.name)}</span>
@@ -120,7 +136,7 @@ function renderSubtopicList(subj, topic) {
     const mastery = sub.masteryScore;
     const accuracy = sub.avgAccuracy;
 
-    return `<div class="subtopic-row" onclick="cycleSubtopicStatus('${escapeHTML(sub.id)}','${escapeHTML(subj.id)}')">
+    return `<div class="subtopic-row" data-action="cycle-subtopic" data-id="${escapeHTML(sub.id)}" data-subject-id="${escapeHTML(subj.id)}">
       <span class="status-dot ${statusClass}"></span>
       <span style="flex:1">${escapeHTML(sub.name)}</span>
       ${mastery != null ? `<span class="text-xs ${mastery >= 75 ? 'text-green' : mastery >= 50 ? 'text-yellow' : 'text-orange'}">${Math.round(mastery)}%</span>` : ''}
