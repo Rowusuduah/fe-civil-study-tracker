@@ -1,7 +1,7 @@
 'use strict';
 
 // TODO: bump CACHE_NAME (e.g. fe-civil-v2) every time you deploy changes to CSS/JS/HTML
-const CACHE_NAME = 'fe-civil-v10';
+const CACHE_NAME = 'fe-civil-v11';
 const APP_SHELL  = [
   './index.html',
   './css/styles.css',
