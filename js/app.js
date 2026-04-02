@@ -31,9 +31,9 @@ let _activeTab = 'dashboard';
 const AUTH_HASH = '63c0e99f5c0595eefcab57e9e55000b2f4223d39c93315854e3470005c989281';
 const AUTH_KEY  = 'fe_civil_auth';
 
-// Rate limiting for login attempts
-let _loginAttempts = 0;
-let _loginLockoutUntil = 0;
+// Rate limiting for login attempts (persisted in sessionStorage to survive reloads)
+let _loginAttempts = parseInt(sessionStorage.getItem('fe_login_attempts') || '0', 10);
+let _loginLockoutUntil = parseInt(sessionStorage.getItem('fe_login_lockout') || '0', 10);
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_BASE_DELAY_MS = 1000; // 1s, doubles each failure
 
@@ -85,14 +85,18 @@ function initAuth() {
     const hash = await sha256(pw);
     if (hash === AUTH_HASH) {
       _loginAttempts = 0;
+      sessionStorage.removeItem('fe_login_attempts');
+      sessionStorage.removeItem('fe_login_lockout');
       sessionStorage.setItem(AUTH_KEY, '1');
       gate.style.display = 'none';
       bootApp();
     } else {
       _loginAttempts++;
+      sessionStorage.setItem('fe_login_attempts', String(_loginAttempts));
       if (_loginAttempts >= LOGIN_MAX_ATTEMPTS) {
         const delay = LOGIN_BASE_DELAY_MS * Math.pow(2, _loginAttempts - LOGIN_MAX_ATTEMPTS);
         _loginLockoutUntil = Date.now() + Math.min(delay, 60000);
+        sessionStorage.setItem('fe_login_lockout', String(_loginLockoutUntil));
         const waitSec = Math.ceil(Math.min(delay, 60000) / 1000);
         errEl.textContent = `Too many attempts. Locked for ${waitSec}s.`;
       } else {

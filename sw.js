@@ -1,7 +1,7 @@
 'use strict';
 
 // TODO: bump CACHE_NAME (e.g. fe-civil-v2) every time you deploy changes to CSS/JS/HTML
-const CACHE_NAME = 'fe-civil-v7';
+const CACHE_NAME = 'fe-civil-v8';
 const APP_SHELL  = [
   './index.html',
   './css/styles.css',
@@ -61,7 +61,7 @@ self.addEventListener('fetch', e => {
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(response => {
-        if (!response || response.status !== 200) return response;
+        if (!response || response.status !== 200 || response.type !== 'basic') return response;
         const clone = response.clone();
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         return response;

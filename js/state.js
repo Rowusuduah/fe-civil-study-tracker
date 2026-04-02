@@ -79,17 +79,17 @@ function buildSubjectTree(savedSubjects) {
       ...subject,
       // Progress fields (merged from saved, defaults to zero)
       coverageStatus: saved.coverageStatus || 'not_started',
-      totalTimeMinutes: saved.totalTimeMinutes || 0,
+      totalTimeMinutes: saved.totalTimeMinutes ?? 0,
       lastStudiedDate: saved.lastStudiedDate || null,
       lastRevisedDate: saved.lastRevisedDate || null,
-      avgConfidence: saved.avgConfidence || null,
-      avgAccuracy: saved.avgAccuracy || null,
-      avgDifficulty: saved.avgDifficulty || null,
-      weaknessScore: saved.weaknessScore || null,
-      masteryScore: saved.masteryScore || null,
-      priorityScore: saved.priorityScore || null,
-      reviewInterval: saved.reviewInterval || 1,
-      reviewCount: saved.reviewCount || 0,
+      avgConfidence: saved.avgConfidence ?? null,
+      avgAccuracy: saved.avgAccuracy ?? null,
+      avgDifficulty: saved.avgDifficulty ?? null,
+      weaknessScore: saved.weaknessScore ?? null,
+      masteryScore: saved.masteryScore ?? null,
+      priorityScore: saved.priorityScore ?? null,
+      reviewInterval: saved.reviewInterval ?? 1,
+      reviewCount: saved.reviewCount ?? 0,
       nextReviewDate: saved.nextReviewDate || null,
       topics: subject.topics.map(topic => {
         const savedTopic = (saved.topics || []).find(t => t.id === topic.id) || {};
@@ -118,7 +118,7 @@ function buildSubjectTree(savedSubjects) {
               reviewInterval: savedSub.reviewInterval || 1,
               reviewCount: savedSub.reviewCount || 0,
               nextReviewDate: savedSub.nextReviewDate || null,
-              mistakeCount: savedSub.mistakeCount || 0
+              mistakeCount: savedSub.mistakeCount ?? 0
             };
           })
         };

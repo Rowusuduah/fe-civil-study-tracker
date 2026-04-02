@@ -60,7 +60,7 @@ function loadJSON(key, defaultValue = null) {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return defaultValue;
-    return JSON.parse(raw);
+    return JSON.parse(raw, (k, v) => k === '__proto__' ? undefined : v);
   } catch (e) {
     console.error(`[storage] Failed to parse ${key} — returning default. Data may be corrupted:`, e);
     return defaultValue;
@@ -191,8 +191,11 @@ function restoreBackup(payload) {
  * Import a backup from a File input event.
  * Calls onComplete(result) with { ok, message }
  */
+const MAX_BACKUP_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 function importBackupFromFile(file, onComplete) {
   if (!file) { onComplete({ ok: false, message: 'No file selected.' }); return; }
+  if (file.size > MAX_BACKUP_FILE_SIZE) { onComplete({ ok: false, message: 'Backup file too large (max 10MB).' }); return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {

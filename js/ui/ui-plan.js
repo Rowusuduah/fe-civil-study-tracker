@@ -202,17 +202,4 @@ function renderWeeklyMilestones() {
   </div>`;
 }
 
-// ─── Plan Actions ────────────────────────────────────────────────────────────
-function generatePlan() {
-  STATE.plan = generateStudyPlan(STATE.subjects, STATE.settings, STATE.sessions);
-  persistPlan();
-  renderPlanTab();
-  showToast('Study plan generated!', 'success');
-}
-
-function regeneratePlan() {
-  STATE.plan = regeneratePlan(STATE.plan, STATE.subjects, STATE.settings, STATE.sessions);
-  persistPlan();
-  renderPlanTab();
-  showToast('Plan regenerated with catch-up adjustments.', 'success');
-}
+// Plan actions are wired in app.js bindAllEvents()
