@@ -108,6 +108,35 @@ function initAuth() {
   });
 }
 
+// ─── Cross-Tab Sync ──────────────────────────────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key && e.key.startsWith('fe_civil_')) {
+    // Another tab changed data — reload state
+    initState();
+    renderCurrentTab();
+    showToast('Data updated from another tab.', 'info');
+  }
+});
+
+// ─── Idle Session Timeout ────────────────────────────────────────────────────
+let _lastActivity = Date.now();
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+function resetIdleTimer() { _lastActivity = Date.now(); }
+
+// Track user activity
+['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+
+// Check every 60 seconds
+setInterval(() => {
+  if (sessionStorage.getItem(AUTH_KEY) === '1' && Date.now() - _lastActivity > IDLE_TIMEOUT_MS) {
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+  }
+}, 60000);
+
 // ─── App Init ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initAuth();
