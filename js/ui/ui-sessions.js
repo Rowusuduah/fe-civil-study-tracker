@@ -25,17 +25,6 @@ function initSessionForm() {
     populateSubtopicDropdown('session-subtopic', subjId, topicSel.value);
   });
 
-  // "Now" buttons for start/end time
-  const setNowTime = (inputId) => {
-    const el = qs(inputId);
-    if (!el) return;
-    const now = new Date();
-    el.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-    el.dispatchEvent(new Event('change'));
-  };
-  qs('btn-now-start')?.addEventListener('click', () => setNowTime('session-start'));
-  qs('btn-now-end')?.addEventListener('click', () => setNowTime('session-end'));
-
   // Auto-calculate duration from start/end times
   const startEl = qs('session-start');
   const endEl   = qs('session-end');
@@ -46,6 +35,17 @@ function initSessionForm() {
     };
     startEl.addEventListener('change', autoCalc);
     endEl.addEventListener('change', autoCalc);
+
+    // "Now" buttons for start/end time
+    const setNowTime = (inputId) => {
+      const el = qs(inputId);
+      if (!el) return;
+      const now = new Date();
+      el.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      autoCalc();
+    };
+    qs('btn-now-start')?.addEventListener('click', () => setNowTime('session-start'));
+    qs('btn-now-end')?.addEventListener('click', () => setNowTime('session-end'));
   }
 
   // Session type buttons

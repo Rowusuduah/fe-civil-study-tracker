@@ -194,9 +194,9 @@ select.form-input {
   background-repeat:no-repeat; background-position:right .6rem center; padding-right:2rem;
 }
 .form-hint { font-size:var(--text-xs); color:var(--muted); }
-.input-with-btn { display:flex; gap:.4rem; align-items:center; }
+.input-with-btn { display:flex; gap:.4rem; align-items:stretch; }
 .input-with-btn .form-input { flex:1; min-width:0; }
-.input-with-btn .btn { white-space:nowrap; }
+.input-with-btn .btn { white-space:nowrap; padding:.45rem .7rem; font-size:var(--text-xs); border:1px solid var(--border); border-radius:var(--radius); background:var(--blue); color:#fff; cursor:pointer; }
 .form-grid   { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; }
 .form-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
 .form-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; }
