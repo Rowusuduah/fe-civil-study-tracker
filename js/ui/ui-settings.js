@@ -96,6 +96,7 @@ function saveSettings_() {
   // Validate
   if (!examDate || !isValidISODate(examDate)) { showToast('Please enter a valid exam date.', 'error'); return; }
   if (examDate < todayISO()) { showToast('Exam date cannot be in the past.', 'error'); return; }
+  if (examDate > '2030-12-31') { showToast('Exam date must be before 2031.', 'error'); return; }
   if (startDate && !isValidISODate(startDate)) { showToast('Please enter a valid study start date.', 'error'); return; }
   if (startDate && startDate < todayISO()) { showToast('Study start date cannot be in the past.', 'error'); return; }
   if (startDate && examDate && startDate >= examDate) { showToast('Study start date must be before the exam date.', 'error'); return; }

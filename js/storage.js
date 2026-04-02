@@ -141,6 +141,9 @@ function exportBackup() {
  * Restore backup from a JSON payload object.
  * Returns { ok: boolean, message: string }
  */
+/** Max allowed size per backup key (1MB) to prevent DoS via oversized data */
+const MAX_BACKUP_KEY_SIZE = 1024 * 1024;
+
 function restoreBackup(payload) {
   if (!payload || typeof payload !== 'object') {
     return { ok: false, message: 'Invalid backup file format.' };
@@ -153,15 +156,35 @@ function restoreBackup(payload) {
   }
 
   // Only restore known backup keys — never write arbitrary keys
+  // Validate each value is a string (raw JSON) and within size limits
   let restored = 0;
+  const errors = [];
   BACKUP_KEYS.forEach(k => {
-    if (Object.prototype.hasOwnProperty.call(payload.data, k)) {
-      localStorage.setItem(k, payload.data[k]);
-      restored++;
+    if (!Object.prototype.hasOwnProperty.call(payload.data, k)) return;
+    const val = payload.data[k];
+    if (typeof val !== 'string') {
+      errors.push(`${k}: expected string, got ${typeof val}`);
+      return;
     }
+    if (val.length > MAX_BACKUP_KEY_SIZE) {
+      errors.push(`${k}: exceeds ${MAX_BACKUP_KEY_SIZE} byte limit (${val.length})`);
+      return;
+    }
+    // Verify it's valid JSON (or a plain string for theme key)
+    if (k !== KEYS.THEME) {
+      try { JSON.parse(val); } catch (e) {
+        errors.push(`${k}: invalid JSON`);
+        return;
+      }
+    }
+    localStorage.setItem(k, val);
+    restored++;
   });
 
-  return { ok: true, message: `Restored ${restored} data keys successfully.` };
+  if (errors.length > 0) {
+    console.error('[storage] Backup restore warnings:', errors);
+  }
+  return { ok: true, message: `Restored ${restored} data keys.${errors.length ? ` Skipped ${errors.length} invalid.` : ''}` };
 }
 
 /**

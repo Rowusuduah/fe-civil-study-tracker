@@ -18,6 +18,11 @@ let _gdriveFileId  = null;
 let _driveConnected= false;
 let _driveSyncTimer= null;
 
+/** Validate Google Drive file ID format to prevent URL injection */
+function isValidDriveId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 100;
+}
+
 // ─── Active Tab Tracker ───────────────────────────────────────────────────────
 let _activeTab = 'dashboard';
 
@@ -25,6 +30,12 @@ let _activeTab = 'dashboard';
 // SHA-256 of "preparation_intense"
 const AUTH_HASH = '63c0e99f5c0595eefcab57e9e55000b2f4223d39c93315854e3470005c989281';
 const AUTH_KEY  = 'fe_civil_auth';
+
+// Rate limiting for login attempts
+let _loginAttempts = 0;
+let _loginLockoutUntil = 0;
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_BASE_DELAY_MS = 1000; // 1s, doubles each failure
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -61,14 +72,32 @@ function initAuth() {
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const pw    = document.getElementById('login-pw').value;
-    const hash  = await sha256(pw);
     const errEl = document.getElementById('login-error');
+
+    // Rate limiting: check lockout
+    const now = Date.now();
+    if (now < _loginLockoutUntil) {
+      const waitSec = Math.ceil((_loginLockoutUntil - now) / 1000);
+      errEl.textContent = `Too many attempts. Try again in ${waitSec}s.`;
+      return;
+    }
+
+    const hash = await sha256(pw);
     if (hash === AUTH_HASH) {
+      _loginAttempts = 0;
       sessionStorage.setItem(AUTH_KEY, '1');
       gate.style.display = 'none';
       bootApp();
     } else {
-      errEl.textContent = 'Incorrect password. Try again.';
+      _loginAttempts++;
+      if (_loginAttempts >= LOGIN_MAX_ATTEMPTS) {
+        const delay = LOGIN_BASE_DELAY_MS * Math.pow(2, _loginAttempts - LOGIN_MAX_ATTEMPTS);
+        _loginLockoutUntil = Date.now() + Math.min(delay, 60000);
+        const waitSec = Math.ceil(Math.min(delay, 60000) / 1000);
+        errEl.textContent = `Too many attempts. Locked for ${waitSec}s.`;
+      } else {
+        errEl.textContent = `Incorrect password. ${LOGIN_MAX_ATTEMPTS - _loginAttempts} attempts remaining.`;
+      }
       document.getElementById('login-pw').value = '';
       document.getElementById('login-pw').focus();
     }
@@ -247,8 +276,9 @@ function initGDrive() {
       scope: GDRIVE_SCOPE,
       callback: () => {}
     });
-    _gdriveFileId    = localStorage.getItem(KEYS.GDRIVE_FILE) || null;
-    _driveConnected  = localStorage.getItem(KEYS.GDRIVE_OK) === 'true';
+    const storedId   = sessionStorage.getItem(KEYS.GDRIVE_FILE) || localStorage.getItem(KEYS.GDRIVE_FILE) || null;
+    _gdriveFileId    = storedId && isValidDriveId(storedId) ? storedId : null;
+    _driveConnected  = sessionStorage.getItem(KEYS.GDRIVE_OK) === 'true' || localStorage.getItem(KEYS.GDRIVE_OK) === 'true';
   } catch (e) {
     /* Drive not available */
   }
@@ -279,13 +309,20 @@ function gWithToken(op) {
   }
 }
 
-async function _gFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { Authorization: `Bearer ${_gAccessToken}`, ...(options.headers || {}) }
-  });
-  if (res.status === 401) { _gAccessToken = null; throw new Error('Token expired'); }
-  return res;
+async function _gFetch(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${_gAccessToken}`, ...(options.headers || {}) }
+    });
+    if (res.status === 401) { _gAccessToken = null; throw new Error('Token expired'); }
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function _gFindFile() {
@@ -305,6 +342,7 @@ async function _gCreateFile(content) {
 }
 
 async function _gUpdateFile(fileId, content) {
+  if (!isValidDriveId(fileId)) throw new Error('Invalid Drive file ID');
   await _gFetch(
     `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
     { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: content }
@@ -316,14 +354,15 @@ function saveToDrive() {
   gWithToken(async () => {
     const content = JSON.stringify(buildBackupPayload());
     let fileId = _gdriveFileId || await _gFindFile();
-    if (fileId) {
+    if (fileId && isValidDriveId(fileId)) {
       await _gUpdateFile(fileId, content);
     } else {
       fileId = await _gCreateFile(content);
+      if (!isValidDriveId(fileId)) throw new Error('Drive returned invalid file ID');
       _gdriveFileId = fileId;
-      localStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+      sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
     }
-    localStorage.setItem(KEYS.GDRIVE_OK, 'true');
+    sessionStorage.setItem(KEYS.GDRIVE_OK, 'true');
     _driveConnected = true;
     setDriveStatus(`Saved — ${new Date().toLocaleTimeString()}`, 'var(--green)');
   });
@@ -333,14 +372,14 @@ function loadFromDrive() {
   setDriveStatus('Loading from Drive…');
   gWithToken(async () => {
     const fileId = _gdriveFileId || await _gFindFile();
-    if (!fileId) { setDriveStatus('No backup found on Drive.', 'var(--orange)'); return; }
+    if (!fileId || !isValidDriveId(fileId)) { setDriveStatus('No backup found on Drive.', 'var(--orange)'); return; }
     const res    = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
     const data   = await res.json();
     const result = restoreBackup(data);
     if (result.ok) {
       _gdriveFileId = fileId;
-      localStorage.setItem(KEYS.GDRIVE_FILE, fileId);
-      localStorage.setItem(KEYS.GDRIVE_OK, 'true');
+      sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+      sessionStorage.setItem(KEYS.GDRIVE_OK, 'true');
       initState();
       renderCurrentTab();
       setDriveStatus(`Loaded — ${new Date().toLocaleTimeString()}`, 'var(--green)');

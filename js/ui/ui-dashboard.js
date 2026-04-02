@@ -262,7 +262,7 @@ function renderRevisionDueList() {
   `).join('');
 
   if (due.length > 6) {
-    listEl.innerHTML += `<div class="empty-state" style="padding:.5rem">+${due.length - 6} more — <a href="#" onclick="switchTab('tab-revision');return false">See all</a></div>`;
+    listEl.insertAdjacentHTML('beforeend', `<div class="empty-state" style="padding:.5rem">+${due.length - 6} more — <a href="#" onclick="switchTab('tab-revision');return false">See all</a></div>`);
   }
 }
 

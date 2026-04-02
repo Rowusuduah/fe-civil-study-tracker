@@ -193,7 +193,7 @@ function renderNeglectedList() {
   }).join('');
 
   if (neglected.length > 12) {
-    el.innerHTML += `<p class="empty-state">+${neglected.length - 12} more neglected topics.</p>`;
+    el.insertAdjacentHTML('beforeend', `<p class="empty-state">+${neglected.length - 12} more neglected topics.</p>`);
   }
 }
 
