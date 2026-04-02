@@ -16,6 +16,7 @@ const MASTERY_WEIGHTS  = { accuracy: 0.35, confidence: 0.25, difficulty: 0.15, c
 const WEAKNESS_WEIGHTS = { accuracy: 0.30, confidence: 0.20, difficulty: 0.15, decay: 0.15, mistakes: 0.10, baseline: 0.10 };
 const PRIORITY_WEIGHTS = { weakness: 0.40, urgency: 0.25, examWeight: 0.15, foundational: 0.10, neglect: 0.10 };
 const RECENCY_DECAY_DAYS = 30;
+const MAX_EXAM_WEIGHT = 0.09;
 
 // ─── Mastery Score (0–100) ───────────────────────────────────────────────────
 /**
@@ -128,7 +129,6 @@ function computePriorityScore({ weaknessScore, nextReviewDate, examWeight, isFou
   }
 
   // Exam weight normalized against max observed weight across FE Civil subjects
-  const MAX_EXAM_WEIGHT = 0.09;
   const examW = examWeight != null ? clamp(examWeight / MAX_EXAM_WEIGHT, 0, 1) : 0.5;
 
   // Foundational bonus (binary)
@@ -213,7 +213,8 @@ function computeSessionDuration(startTime, endTime) {
  */
 function plannedHoursForDate(isoDate, settings) {
   const { intensePhaseDate, weekdayHours, weekendHours, intenseHours } = settings;
-  if (isoDate >= intensePhaseDate) return intenseHours;
+  if (intensePhaseDate && isoDate >= intensePhaseDate) return intenseHours;
+  if (!intensePhaseDate) return intenseHours; // no intense date set = intense from day 1
   return isWeekend(isoDate) ? weekendHours : weekdayHours;
 }
 

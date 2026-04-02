@@ -20,7 +20,7 @@ function generateStudyPlan(subjects, settings, existingSessions = []) {
   const startDate = resolveStartDate(settings);
   const examDate = settings.examDate;
   const finalSprintStart = addDays(examDate, -settings.finalSprintDays);
-  const intenseStart = settings.intensePhaseDate;
+  const intenseStart = settings.intensePhaseDate || startDate; // default: intense from day 1
 
   const days = dateRange(startDate, examDate);
   const plan = [];

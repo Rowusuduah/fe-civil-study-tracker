@@ -33,7 +33,7 @@ const BACKUP_VERSION = 1;
 const DEFAULT_SETTINGS = {
   studyStartDate: null,
   examDate: '2026-04-22',
-  intensePhaseDate: '2026-04-03',
+  intensePhaseDate: null,
   weekdayHours: 10,
   weekendHours: 12,
   intenseHours: 14,
