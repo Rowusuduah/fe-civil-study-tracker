@@ -141,6 +141,39 @@ function exportBackup() {
  * Restore backup from a JSON payload object.
  * Returns { ok: boolean, message: string }
  */
+// Safety backup — saves current localStorage before any overwrite.
+// Keeps up to 3 rolling backups so data is always recoverable.
+const KEY_SAFETY_BACKUP = 'fe_civil_safety_backup';
+function _saveLocalSafetyBackup() {
+  try {
+    const data = {};
+    let hasData = false;
+    BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { data[k] = v; hasData = true; } });
+    if (!hasData) return;
+    const backup = { _saved: new Date().toISOString(), data };
+    const existing = JSON.parse(localStorage.getItem(KEY_SAFETY_BACKUP) || '[]');
+    existing.unshift(backup);
+    while (existing.length > 3) existing.pop();
+    localStorage.setItem(KEY_SAFETY_BACKUP, JSON.stringify(existing));
+  } catch (e) { console.warn('[FE Civil] Safety backup failed:', e); }
+}
+
+// Restore from safety backup — call from browser console if needed:
+//   restoreSafetyBackup(0)  // most recent
+//   restoreSafetyBackup(1)  // second most recent
+function restoreSafetyBackup(index = 0) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(KEY_SAFETY_BACKUP) || '[]');
+    if (!existing[index]) { console.error('No safety backup at index', index); return false; }
+    const backup = existing[index];
+    console.log('Restoring safety backup from:', backup._saved);
+    Object.entries(backup.data).forEach(([k, v]) => localStorage.setItem(k, v));
+    location.reload();
+    return true;
+  } catch (e) { console.error('Safety restore failed:', e); return false; }
+}
+window.restoreSafetyBackup = restoreSafetyBackup;
+
 /** Max allowed size per backup key (1MB) to prevent DoS via oversized data */
 const MAX_BACKUP_KEY_SIZE = 1024 * 1024;
 
@@ -154,6 +187,9 @@ function restoreBackup(payload) {
   if (!payload.data || typeof payload.data !== 'object') {
     return { ok: false, message: 'Backup file is missing data section.' };
   }
+
+  // Safety backup before overwriting
+  _saveLocalSafetyBackup();
 
   // Only restore known backup keys — never write arbitrary keys
   // Validate each value is a string (raw JSON) and within size limits
