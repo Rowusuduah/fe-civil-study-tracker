@@ -403,6 +403,14 @@ function saveToDrive() {
   });
 }
 
+function _getLocalDataDate() {
+  try {
+    const sessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
+    const dates = sessions.map(s => s.date).filter(Boolean).sort();
+    return dates.length ? dates[dates.length - 1] : null;
+  } catch { return null; }
+}
+
 function loadFromDrive() {
   setDriveStatus('Loading from Drive…');
   gWithToken(async () => {
@@ -411,6 +419,17 @@ function loadFromDrive() {
     const res    = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
     if (!res.ok) { setDriveStatus('Load failed: HTTP ' + res.status, 'var(--red)'); return; }
     const data   = await res.json();
+
+    // Warn if local data is newer than Drive backup
+    const localDate = _getLocalDataDate();
+    const driveDate = data._exported ? data._exported.slice(0, 10) : '';
+    const newerWarning = (localDate && driveDate && localDate > driveDate)
+      ? `\n\n⚠️ WARNING: Your local data (${localDate}) is NEWER than the Drive backup (${driveDate}). Loading will overwrite your recent changes!`
+      : '';
+    if (!confirm(`Load backup from Drive?${newerWarning}\n\nThis will replace all current data on this device.`)) {
+      setDriveStatus(''); return;
+    }
+
     const result = restoreBackup(data);
     if (result.ok) {
       _gdriveFileId = fileId;
@@ -436,7 +455,13 @@ function queueDriveSync() {
 function autoSyncDrive() {
   if (!GDRIVE_CLIENT_ID) return;
   initGDrive();
-  if (_driveConnected && _gdriveFileId && STATE.sessions.length === 0) {
-    setTimeout(loadFromDrive, 1000);
+  if (_driveConnected && _gdriveFileId) {
+    // Only auto-load from Drive if local data is empty (fresh device)
+    if (STATE.sessions.length === 0) {
+      setTimeout(loadFromDrive, 1000);
+    } else {
+      // Local data exists — silently push to Drive to keep it current
+      setTimeout(saveToDrive, 1500);
+    }
   }
 }
