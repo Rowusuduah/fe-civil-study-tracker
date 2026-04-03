@@ -445,6 +445,48 @@ function loadFromDrive() {
   });
 }
 
+/** Silent auto-load — compares dates, no confirm dialog */
+async function _autoLoadFromDrive() {
+  try {
+    setDriveStatus('Syncing…');
+    const fileId = _gdriveFileId || await _gFindFile();
+    if (!fileId || !isValidDriveId(fileId)) { setDriveStatus(''); return; }
+    const res = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!res.ok) { setDriveStatus(''); return; }
+    const data = await res.json();
+    if (!data || !data.data || typeof data.data !== 'object') { setDriveStatus(''); return; }
+
+    const localDate = _getLocalDataDate();
+    const driveDate = data._exported ? data._exported.slice(0, 10) : '';
+
+    if (localDate && driveDate && localDate > driveDate) {
+      // Local is newer — upload to Drive
+      setDriveStatus('Local data is newer — uploading…');
+      saveToDrive();
+      return;
+    }
+
+    if (driveDate && (!localDate || driveDate > localDate)) {
+      // Drive is newer — load it silently
+      const result = restoreBackup(data);
+      if (result.ok) {
+        _gdriveFileId = fileId;
+        sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+        initState();
+        renderCurrentTab();
+        setDriveStatus(`Synced ${driveDate}`, 'var(--green)');
+      }
+      return;
+    }
+
+    // Same date — just confirm connection
+    setDriveStatus('Up to date', 'var(--green)');
+  } catch (err) {
+    setDriveStatus('');
+    console.error('[FE Civil Drive auto-sync]', err);
+  }
+}
+
 /** Debounced auto-save after any data mutation */
 function queueDriveSync() {
   if (!_driveConnected || !GDRIVE_CLIENT_ID) return;
@@ -456,12 +498,6 @@ function autoSyncDrive() {
   if (!GDRIVE_CLIENT_ID) return;
   initGDrive();
   if (_driveConnected && _gdriveFileId) {
-    // Only auto-load from Drive if local data is empty (fresh device)
-    if (STATE.sessions.length === 0) {
-      setTimeout(loadFromDrive, 1000);
-    } else {
-      // Local data exists — silently push to Drive to keep it current
-      setTimeout(saveToDrive, 1500);
-    }
+    setTimeout(() => gWithToken(_autoLoadFromDrive), 1000);
   }
 }
