@@ -15,6 +15,8 @@ function renderSettingsTab() {
   if (qs('set-intervals'))     qs('set-intervals').value     = (s.revisionIntervals || DEFAULT_SETTINGS.revisionIntervals).join(',');
   if (qs('set-neglect-days'))  qs('set-neglect-days').value  = s.neglectDays ?? DEFAULT_SETTINGS.neglectDays;
   if (qs('set-final-sprint'))  qs('set-final-sprint').value  = s.finalSprintDays ?? DEFAULT_SETTINGS.finalSprintDays;
+  if (qs('baseline-status')) qs('baseline-status').textContent = Object.keys(PRIOR_EXAM_BASELINE).length
+    ? 'Private profile loaded.' : 'No profile loaded; subject priorities use your study activity.';
 
   // Theme buttons
   const isDark = STATE.theme === 'dark' || !document.body.classList.contains('light');
@@ -64,6 +66,34 @@ function initSettingsForm() {
       });
     });
   }
+
+  const baselineInput = qs('import-baseline-file');
+  baselineInput?.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 100000) {
+      showToast('Profile file is too large.', 'error');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        if (!saveBaselineProfile(JSON.parse(reader.result))) throw new Error('Invalid profile format.');
+        initState();
+        renderCurrentTab();
+        showToast('Private exam profile imported.', 'success');
+      } catch (_) {
+        showToast('Could not import that profile JSON.', 'error');
+      }
+      e.target.value = '';
+    };
+    reader.onerror = () => {
+      showToast('Could not read that profile file.', 'error');
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
 
   // Drive
   qs('btn-save-drive')?.addEventListener('click', () => saveToDrive());

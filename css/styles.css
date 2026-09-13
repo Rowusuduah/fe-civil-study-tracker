@@ -600,6 +600,7 @@ select.form-input {
 }
 
 /* ── Login Gate ─────────────────────────────────────────────────────────── */
+body.auth-locked > :not(#login-gate):not(script) { visibility:hidden; }
 #login-gate {
   position:fixed; inset:0; z-index:10000;
   background-color:var(--bg);
@@ -640,6 +641,8 @@ select.form-input {
 }
 .login-field input:focus { border-color:var(--blue); }
 .login-field input::placeholder { font-family:var(--font); letter-spacing:0; }
+.login-field[hidden] { display:none; }
+.login-field + .login-field { margin-top:.6rem; }
 .login-error {
   font-size:var(--text-sm); color:var(--red);
   min-height:1.4em; margin:.5rem 0 .25rem;
@@ -651,6 +654,8 @@ select.form-input {
   border-radius:var(--radius); transition:background var(--t);
 }
 .login-btn:hover { background:var(--blue2); color:#eaf4fc; }
+.login-btn:disabled { opacity:.6; cursor:wait; }
+.login-note { font-size:var(--text-xs); color:var(--muted); margin:1rem 0 0; }
 .sr-only {
   position:absolute; width:1px; height:1px;
   padding:0; margin:-1px; overflow:hidden;
