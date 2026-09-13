@@ -1,0 +1,576 @@
+/**
+ * app.js — FE Civil Study Tracker Entry Point
+ * Initializes state, wires all tabs, binds all events, renders first tab.
+ * Load order: utils → storage → data → engine → state → ui → app (this file)
+ */
+
+'use strict';
+
+// ─── Google Drive Config ──────────────────────────────────────────────────────
+// Set GDRIVE_CLIENT_ID to your Google Cloud OAuth 2.0 Client ID to enable sync.
+const GDRIVE_CLIENT_ID = '394124622094-3cj4ho2ipp3m6pm0un09tg9knelhfqtu.apps.googleusercontent.com';
+const GDRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.file';
+const GDRIVE_FILENAME  = 'FECivil_Backup.json';
+
+let _gTokenClient  = null;
+let _gAccessToken  = null;
+let _gdriveFileId  = null;
+let _driveConnected= false;
+let _driveSyncTimer= null;
+
+/** Validate Google Drive file ID format to prevent URL injection */
+function isValidDriveId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 100;
+}
+
+// ─── Active Tab Tracker ───────────────────────────────────────────────────────
+let _activeTab = 'dashboard';
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// A per-browser display lock. Study data itself remains in localStorage.
+const AUTH_CONFIG_KEY = 'fe_civil_auth_config';
+const AUTH_KEY = 'fe_civil_auth';
+const AUTH_ITERATIONS = 310000;
+
+// Rate limiting for login attempts (persisted in sessionStorage to survive reloads)
+let _loginAttempts = parseInt(sessionStorage.getItem('fe_login_attempts') || '0', 10);
+let _loginLockoutUntil = parseInt(sessionStorage.getItem('fe_login_lockout') || '0', 10);
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_BASE_DELAY_MS = 1000; // 1s, doubles each failure
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function readAuthConfig() {
+  try {
+    const config = JSON.parse(localStorage.getItem(AUTH_CONFIG_KEY));
+    if (config?.version !== 1 || !Number.isInteger(config.iterations) ||
+        config.iterations < 100000 || config.iterations > 1000000 ||
+        !/^[a-f0-9]{32}$/.test(config.salt) || !/^[a-f0-9]{64}$/.test(config.hash)) return null;
+    return config;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function derivePasswordHash(password, saltHex, iterations) {
+  const salt = new Uint8Array(saltHex.match(/../g).map(pair => parseInt(pair, 16)));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, key, 256);
+  return bytesToHex(new Uint8Array(bits));
+}
+
+async function createAuthConfig(password) {
+  const salt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+  return { version: 1, iterations: AUTH_ITERATIONS, salt,
+    hash: await derivePasswordHash(password, salt, AUTH_ITERATIONS) };
+}
+
+async function matchesAuthConfig(password, config) {
+  const actual = await derivePasswordHash(password, config.salt, config.iterations);
+  let difference = 0;
+  for (let i = 0; i < config.hash.length; i++) difference |= actual.charCodeAt(i) ^ config.hash.charCodeAt(i);
+  return difference === 0;
+}
+
+function bootApp() {
+  initState();
+  applyTheme(STATE.theme);
+  bindAllEvents();
+  switchTab('tab-dashboard');
+  autoSyncDrive();
+}
+
+function initAuth() {
+  const gate = document.getElementById('login-gate');
+  const config = readAuthConfig();
+  if (config && sessionStorage.getItem(AUTH_KEY) === '1') {
+    gate.style.display = 'none';
+    document.body.classList.remove('auth-locked');
+    bootApp();
+    return;
+  }
+  sessionStorage.removeItem(AUTH_KEY);
+  const setup = !config;
+  const input = document.getElementById('login-pw');
+  const confirmField = document.getElementById('login-confirm-field');
+  const confirmInput = document.getElementById('login-confirm-pw');
+  const error = document.getElementById('login-error');
+  const button = document.getElementById('login-submit');
+  confirmField.hidden = !setup;
+  confirmInput.required = setup;
+  input.autocomplete = setup ? 'new-password' : 'current-password';
+  document.getElementById('login-sub').textContent = setup
+    ? 'Choose a new password for this browser. Your saved study data stays here.'
+    : 'Enter this browser’s password to continue.';
+  button.textContent = setup ? 'Set password' : 'Unlock';
+  gate.style.display = 'flex';
+  input.focus();
+  // Focus trap: keep focus inside the login modal
+  gate.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      const focusable = [...gate.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.closest('[hidden]') && !el.disabled);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = input.value;
+    error.textContent = '';
+
+    if (setup) {
+      if (pw.length < 12) { error.textContent = 'Use at least 12 characters.'; return; }
+      if (pw !== confirmInput.value) { error.textContent = 'Passwords do not match.'; return; }
+    }
+
+    // Rate limiting: check lockout
+    const now = Date.now();
+    if (!setup && now < _loginLockoutUntil) {
+      const waitSec = Math.ceil((_loginLockoutUntil - now) / 1000);
+      error.textContent = `Too many attempts. Try again in ${waitSec}s.`;
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      let valid;
+      if (setup) {
+        localStorage.setItem(AUTH_CONFIG_KEY, JSON.stringify(await createAuthConfig(pw)));
+        valid = true;
+      } else {
+        valid = await matchesAuthConfig(pw, config);
+      }
+      if (valid) {
+        _loginAttempts = 0;
+        sessionStorage.removeItem('fe_login_attempts');
+        sessionStorage.removeItem('fe_login_lockout');
+        sessionStorage.setItem(AUTH_KEY, '1');
+        gate.style.display = 'none';
+        document.body.classList.remove('auth-locked');
+        bootApp();
+      } else {
+        _loginAttempts++;
+        sessionStorage.setItem('fe_login_attempts', String(_loginAttempts));
+        if (_loginAttempts >= LOGIN_MAX_ATTEMPTS) {
+          const delay = LOGIN_BASE_DELAY_MS * Math.pow(2, _loginAttempts - LOGIN_MAX_ATTEMPTS);
+          _loginLockoutUntil = Date.now() + Math.min(delay, 60000);
+          sessionStorage.setItem('fe_login_lockout', String(_loginLockoutUntil));
+          const waitSec = Math.ceil(Math.min(delay, 60000) / 1000);
+          error.textContent = `Too many attempts. Locked for ${waitSec}s.`;
+        } else {
+          error.textContent = `Incorrect password. ${LOGIN_MAX_ATTEMPTS - _loginAttempts} attempts remaining.`;
+        }
+        input.value = '';
+        input.focus();
+      }
+    } catch (_) {
+      error.textContent = 'Password unavailable. Enable browser storage and use HTTPS or localhost.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+// ─── Cross-Tab Sync ──────────────────────────────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key === AUTH_CONFIG_KEY) {
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+    return;
+  }
+  if (e.key && e.key.startsWith('fe_civil_')) {
+    // Another tab changed data — reload state
+    initState();
+    renderCurrentTab();
+    showToast('Data updated from another tab.', 'info');
+  }
+});
+
+// ─── Idle Session Timeout ────────────────────────────────────────────────────
+let _lastActivity = Date.now();
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+function resetIdleTimer() { _lastActivity = Date.now(); }
+
+// Track user activity
+['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+
+// Check every 60 seconds
+setInterval(() => {
+  if (sessionStorage.getItem(AUTH_KEY) === '1' && Date.now() - _lastActivity > IDLE_TIMEOUT_MS) {
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+  }
+}, 60000);
+
+// ─── App Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initAuth();
+});
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
+  STATE.theme = theme || 'dark';
+  saveTheme(STATE.theme);
+  document.body.classList.toggle('light', STATE.theme === 'light');
+  const btn = qs('theme-toggle');
+  if (btn) {
+    btn.textContent = STATE.theme === 'light' ? '🌙' : '☀';
+    btn.setAttribute('aria-label', `Switch to ${STATE.theme === 'light' ? 'dark' : 'light'} theme`);
+  }
+  qs('set-theme-dark')?.classList.toggle('active', STATE.theme === 'dark');
+  qs('set-theme-light')?.classList.toggle('active', STATE.theme === 'light');
+}
+
+function toggleTheme() {
+  const next = STATE.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(next); // applyTheme saves theme and updates all buttons
+}
+
+// ─── Tab Switching ────────────────────────────────────────────────────────────
+function switchTab(tabId) {
+  const sectionId = tabId.replace('tab-', 'sec-');
+
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
+
+  const section = document.getElementById(sectionId);
+  if (section) section.classList.add('on');
+
+  const tabBtn = document.getElementById(tabId);
+  if (tabBtn) {
+    tabBtn.classList.add('active');
+    tabBtn.setAttribute('aria-selected', 'true');
+    tabBtn.setAttribute('tabindex', '0');
+  }
+
+  _activeTab = tabId.replace('tab-', '');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  switch (_activeTab) {
+    case 'dashboard':   renderDashboard();      break;
+    case 'plan':        renderPlanTab();         break;
+    case 'sessions':    renderSessionList();     break;
+    case 'subjects':    renderSubjectsTab();     break;
+    case 'revision':    renderRevisionTab();     break;
+    case 'resources':   renderResourcesTab();    break;
+    case 'assessments': renderAssessmentsTab();  break;
+    case 'analytics':   renderAnalyticsTab();    break;
+    case 'settings':    renderSettingsTab();     break;
+  }
+}
+
+// ─── Event Binding ─────────────────────────────────────────────────────────────
+let _eventsBound = false;
+function bindAllEvents() {
+  if (_eventsBound) return;
+  _eventsBound = true;
+
+  // Tab list (click + keyboard)
+  const tablist = qs('tablist');
+  if (tablist) {
+    tablist.addEventListener('click', e => {
+      const btn = e.target.closest('.nav-tab');
+      if (btn?.id) switchTab(btn.id);
+    });
+    tablist.addEventListener('keydown', e => {
+      const tabs = [...document.querySelectorAll('.nav-tab')];
+      const idx  = tabs.findIndex(t => t === document.activeElement);
+      if (idx < 0) return;
+      if (e.key === 'ArrowRight') { const n = tabs[(idx+1) % tabs.length]; n.focus(); switchTab(n.id); }
+      if (e.key === 'ArrowLeft')  { const p = tabs[(idx-1+tabs.length) % tabs.length]; p.focus(); switchTab(p.id); }
+    });
+  }
+
+  // Theme toggle
+  qs('theme-toggle')?.addEventListener('click', toggleTheme);
+
+  // Calendar navigation
+  qs('cal-prev')?.addEventListener('click', () => calNav(-1));
+  qs('cal-next')?.addEventListener('click', () => calNav(1));
+
+  // Plan actions
+  qs('btn-generate-plan')?.addEventListener('click', () => {
+    STATE.plan = generateStudyPlan(STATE.subjects, STATE.settings, STATE.sessions);
+    persistPlan();
+    renderPlanTab();
+    showToast('Study plan generated!', 'success');
+  });
+  qs('btn-regenerate-plan')?.addEventListener('click', () => {
+    if (!STATE.plan.length) {
+      STATE.plan = generateStudyPlan(STATE.subjects, STATE.settings, STATE.sessions);
+    } else {
+      STATE.plan = regeneratePlan(STATE.plan, STATE.subjects, STATE.settings, STATE.sessions);
+    }
+    persistPlan();
+    renderPlanTab();
+    showToast('Plan regenerated with catch-up adjustments.', 'success');
+  });
+
+  // Session form
+  initSessionForm();
+
+  // Subjects filters
+  initSubjectsFilters();
+
+  // Revision: mistake modal (cascade dropdowns wired once here)
+  initMistakeModal();
+  qs('btn-add-mistake')?.addEventListener('click', openMistakeModal);
+  qs('btn-close-mistake')?.addEventListener('click', closeMistakeModal);
+  qs('mistake-form')?.addEventListener('submit', saveMistake);
+  qs('mistake-modal')?.addEventListener('click', e => {
+    if (e.target === qs('mistake-modal')) closeMistakeModal();
+  });
+
+  // Resources
+  initResourceForm();
+  qs('btn-add-resource')?.addEventListener('click', () => {
+    resetResourceForm();
+    qs('resource-form-card')?.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Assessments
+  initAssessmentForm();
+  qs('btn-add-assessment')?.addEventListener('click', () => {
+    resetAssessmentForm();
+    qs('assessment-form-card')?.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Analytics range change
+  qs('analytics-range')?.addEventListener('change', renderAnalyticsTab);
+
+  // Settings
+  initSettingsForm();
+
+  // Escape key closes modals
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMistakeModal();
+  });
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(message, type = 'info') {
+  const el = qs('toast');
+  if (!el) return;
+  el.textContent = message; // toast only shows app-generated text, no user content
+  el.className = `toast ${type}`;
+  show(el);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => hide(el), 3500);
+}
+
+// ─── Google Drive Sync ────────────────────────────────────────────────────────
+function initGDrive() {
+  if (!GDRIVE_CLIENT_ID || typeof google === 'undefined') return;
+  try {
+    _gTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPE,
+      callback: () => {}
+    });
+    const storedId   = sessionStorage.getItem(KEYS.GDRIVE_FILE) || localStorage.getItem(KEYS.GDRIVE_FILE) || null;
+    _gdriveFileId    = storedId && isValidDriveId(storedId) ? storedId : null;
+    _driveConnected  = sessionStorage.getItem(KEYS.GDRIVE_OK) === 'true' || localStorage.getItem(KEYS.GDRIVE_OK) === 'true';
+  } catch (e) {
+    /* Drive not available */
+  }
+}
+
+function setDriveStatus(msg, color) {
+  const el = qs('gdrive-status');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--muted)'; }
+}
+
+function gWithToken(op) {
+  if (!_gTokenClient) {
+    setDriveStatus('Google Drive not configured. Add Client ID to app.js.', 'var(--red)');
+    return;
+  }
+  _gTokenClient.callback = async ({ access_token, error }) => {
+    if (error) { setDriveStatus('Auth failed: ' + error, 'var(--red)'); return; }
+    _gAccessToken = access_token;
+    await op(access_token).catch(e => setDriveStatus('Drive error: ' + e.message, 'var(--red)'));
+  };
+  if (_gAccessToken) {
+    op(_gAccessToken).catch(() => {
+      _gAccessToken = null;
+      _gTokenClient.requestAccessToken({ prompt: '' });
+    });
+  } else {
+    _gTokenClient.requestAccessToken({ prompt: '' });
+  }
+}
+
+async function _gFetch(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${_gAccessToken}`, ...(options.headers || {}) }
+    });
+    if (res.status === 401) { _gAccessToken = null; throw new Error('Token expired'); }
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function _gFindFile() {
+  const res  = await _gFetch(`https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FILENAME}'&fields=files(id)&spaces=drive`);
+  if (!res.ok) { console.error('[drive] Find file failed:', res.status); return null; }
+  const data = await res.json();
+  return data.files?.[0]?.id || null;
+}
+
+async function _gCreateFile(content) {
+  const meta = JSON.stringify({ name: GDRIVE_FILENAME, mimeType: 'application/json' });
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('media',    new Blob([content], { type: 'application/json' }));
+  const res  = await _gFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('Drive create failed: ' + res.status);
+  const data = await res.json();
+  return data.id;
+}
+
+async function _gUpdateFile(fileId, content) {
+  if (!isValidDriveId(fileId)) throw new Error('Invalid Drive file ID');
+  await _gFetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: content }
+  );
+}
+
+function saveToDrive() {
+  setDriveStatus('Saving to Drive…');
+  gWithToken(async () => {
+    const content = JSON.stringify(buildBackupPayload());
+    let fileId = _gdriveFileId || await _gFindFile();
+    if (fileId && isValidDriveId(fileId)) {
+      await _gUpdateFile(fileId, content);
+    } else {
+      fileId = await _gCreateFile(content);
+      if (!isValidDriveId(fileId)) throw new Error('Drive returned invalid file ID');
+      _gdriveFileId = fileId;
+      sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+    }
+    sessionStorage.setItem(KEYS.GDRIVE_OK, 'true');
+    _driveConnected = true;
+    setDriveStatus(`Saved — ${new Date().toLocaleTimeString()}`, 'var(--green)');
+  });
+}
+
+function _getLocalDataDate() {
+  try {
+    const sessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
+    const dates = sessions.map(s => s.date).filter(Boolean).sort();
+    return dates.length ? dates[dates.length - 1] : null;
+  } catch { return null; }
+}
+
+function loadFromDrive() {
+  setDriveStatus('Loading from Drive…');
+  gWithToken(async () => {
+    const fileId = _gdriveFileId || await _gFindFile();
+    if (!fileId || !isValidDriveId(fileId)) { setDriveStatus('No backup found on Drive.', 'var(--orange)'); return; }
+    const res    = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!res.ok) { setDriveStatus('Load failed: HTTP ' + res.status, 'var(--red)'); return; }
+    const data   = await res.json();
+
+    // Warn if local data is newer than Drive backup
+    const localDate = _getLocalDataDate();
+    const driveDate = data._exported ? data._exported.slice(0, 10) : '';
+    const newerWarning = (localDate && driveDate && localDate > driveDate)
+      ? `\n\n⚠️ WARNING: Your local data (${localDate}) is NEWER than the Drive backup (${driveDate}). Loading will overwrite your recent changes!`
+      : '';
+    if (!confirm(`Load backup from Drive?${newerWarning}\n\nThis will replace all current data on this device.`)) {
+      setDriveStatus(''); return;
+    }
+
+    const result = restoreBackup(data);
+    if (result.ok) {
+      _gdriveFileId = fileId;
+      sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+      sessionStorage.setItem(KEYS.GDRIVE_OK, 'true');
+      initState();
+      renderCurrentTab();
+      setDriveStatus(`Loaded — ${new Date().toLocaleTimeString()}`, 'var(--green)');
+      showToast('Data loaded from Drive.', 'success');
+    } else {
+      setDriveStatus('Restore failed: ' + result.message, 'var(--red)');
+    }
+  });
+}
+
+/** Silent auto-load — compares dates, no confirm dialog */
+async function _autoLoadFromDrive() {
+  try {
+    setDriveStatus('Syncing…');
+    const fileId = _gdriveFileId || await _gFindFile();
+    if (!fileId || !isValidDriveId(fileId)) { setDriveStatus(''); return; }
+    const res = await _gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!res.ok) { setDriveStatus(''); return; }
+    const data = await res.json();
+    if (!data || !data.data || typeof data.data !== 'object') { setDriveStatus(''); return; }
+
+    const localDate = _getLocalDataDate();
+    const driveDate = data._exported ? data._exported.slice(0, 10) : '';
+
+    if (localDate && driveDate && localDate > driveDate) {
+      // Local is newer — upload to Drive
+      setDriveStatus('Local data is newer — uploading…');
+      saveToDrive();
+      return;
+    }
+
+    if (driveDate && (!localDate || driveDate > localDate)) {
+      // Drive is newer — load it silently
+      const result = restoreBackup(data);
+      if (result.ok) {
+        _gdriveFileId = fileId;
+        sessionStorage.setItem(KEYS.GDRIVE_FILE, fileId);
+        initState();
+        renderCurrentTab();
+        setDriveStatus(`Synced ${driveDate}`, 'var(--green)');
+      }
+      return;
+    }
+
+    // Same date — just confirm connection
+    setDriveStatus('Up to date', 'var(--green)');
+  } catch (err) {
+    setDriveStatus('');
+    console.error('[FE Civil Drive auto-sync]', err);
+  }
+}
+
+/** Debounced auto-save after any data mutation */
+function queueDriveSync() {
+  if (!_driveConnected || !GDRIVE_CLIENT_ID) return;
+  clearTimeout(_driveSyncTimer);
+  _driveSyncTimer = setTimeout(saveToDrive, 3000);
+}
+
+function autoSyncDrive() {
+  if (!GDRIVE_CLIENT_ID) return;
+  initGDrive();
+  if (_driveConnected && _gdriveFileId) {
+    setTimeout(() => gWithToken(_autoLoadFromDrive), 1000);
+  }
+}
