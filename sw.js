@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'fe-civil-v22';
+const CACHE_NAME = 'fe-civil-v23';
 const APP_SHELL  = [
   './index.html',
   './css/styles.css',
@@ -24,6 +24,10 @@ const APP_SHELL  = [
   './js/ui/ui-settings.js',
   './js/app.js',
   './icons/icon.svg',
+  './icons/apple-touch-icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './manifest.json',
 ];
 
