@@ -21,9 +21,9 @@ An adaptive, offline-first study tracker for the **NCEES FE Civil Engineering ex
 
 1. Clone or download the repository
 2. Serve the folder at `localhost` (or use the HTTPS website) and open it in a modern browser
-3. Set a password for this browser, then choose your exam date in Settings
+3. Tap **Email me a code**, enter the 6-digit code from Gmail, then choose your exam date in Settings
 
-The former shared password has been retired. Password setup is per browser and does not erase existing study data. This is only a casual on-device view lock: local data is not encrypted, and someone with browser developer tools on that device can bypass it. Use a trusted device. The password is not included in backups or Google Drive sync; set one on each device.
+The password lock has been replaced by an emailed code. One code keeps this device unlocked for 30 days, shared with MoneyTrack and Deadline Tracker on the same site. It is a screen lock, not encryption: local data stays in this browser.
 
 > **Note**: Service Worker requires a `localhost` or `https://` origin. For local development, use a simple static server:
 > ```bash

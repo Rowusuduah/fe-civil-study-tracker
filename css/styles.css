@@ -656,6 +656,13 @@ body.auth-locked > :not(#login-gate):not(script) { visibility:hidden; }
 .login-btn:hover { background:var(--blue2); color:#eaf4fc; }
 .login-btn:disabled { opacity:.6; cursor:wait; }
 .login-note { font-size:var(--text-xs); color:var(--muted); margin:1rem 0 0; }
+/* Email-code lock screen (js/email-login.js) */
+#login-gate [hidden] { display:none !important; }
+#el-step-request .login-btn, #el-step-code .login-btn, #el-step-recovery .login-btn { width:100%; margin-top:.6rem; }
+.login-field input.el-code { font-size:1.4rem; letter-spacing:.45em; text-align:center; }
+.el-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.35rem .8rem; margin:.75rem 0 0; font-size:var(--text-xs); }
+.el-link { background:none; border:0; padding:0; color:var(--blue); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.el-hint { color:var(--muted); }
 .sr-only {
   position:absolute; width:1px; height:1px;
   padding:0; margin:-1px; overflow:hidden;

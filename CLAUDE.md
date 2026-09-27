@@ -59,7 +59,7 @@ README.md                      # Full project documentation
 | `fe_civil_gdrive_file` | string | Google Drive file ID |
 | `fe_civil_gdrive_ok` | bool | Drive connected flag |
 | `fe_civil_baseline` | object | Optional private exam baseline (included in backup) |
-| `fe_civil_auth_config` | object | Per-browser password verifier (excluded from backup) |
+| `rowusuduah_login_pass_v1` | string | Signed 30-day email-code pass shared with MoneyTrack and Deadline Tracker (excluded from backup) |
 
 ---
 
@@ -111,10 +111,7 @@ profile from a JSON file in Settings. This browser-local profile is included in
 JSON backups and Google Drive sync. Without a profile, baseline weakness is
 neutral and the app adapts from logged study activity.
 
-The password gate is a casual display lock only. It does not encrypt local
-study records or authenticate with a server, and anyone with browser developer
-tools on the same device can bypass it. Never put a default or recovery password
-in public source.
+The email-code lock (js/email-login.js, synced from the private login-codes repo) is a screen lock only. It does not encrypt local study records, and anyone with browser developer tools on the same device can bypass it. Only the SHA-256 of the offline recovery key is in source; never commit the key itself.
 
 ---
 
