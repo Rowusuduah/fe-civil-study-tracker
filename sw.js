@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'fe-civil-v24';
+const CACHE_NAME = 'fe-civil-v25';
 const APP_SHELL  = [
   './index.html',
   './css/styles.css',

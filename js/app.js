@@ -448,3 +448,10 @@ function autoSyncDrive() {
     setTimeout(() => gWithToken(_autoLoadFromDrive), 1000);
   }
 }
+
+// Offline support. Registered from this file because the page's CSP blocks inline scripts.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('[sw] Registration failed:', err));
+  });
+}

@@ -871,13 +871,5 @@
   <script src="js/ui/ui-settings.js"></script>
   <script src="js/email-login.js"></script>
   <script src="js/app.js"></script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      });
-    }
-  </script>
 </body>
 </html>
