@@ -1,10 +1,11 @@
 'use strict';
 
-const CACHE_NAME = 'fe-civil-v23';
+const CACHE_NAME = 'fe-civil-v24';
 const APP_SHELL  = [
   './index.html',
   './css/styles.css',
   './js/utils.js',
+  './js/email-login.js',
   './js/storage.js',
   './js/data/baseline.js',
   './js/data/subjects.js',

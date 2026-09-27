@@ -26,53 +26,11 @@ function isValidDriveId(id) {
 // ─── Active Tab Tracker ───────────────────────────────────────────────────────
 let _activeTab = 'dashboard';
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-// A per-browser display lock. Study data itself remains in localStorage.
-const AUTH_CONFIG_KEY = 'fe_civil_auth_config';
-const AUTH_KEY = 'fe_civil_auth';
-const AUTH_ITERATIONS = 310000;
-
-// Rate limiting for login attempts (persisted in sessionStorage to survive reloads)
-let _loginAttempts = parseInt(sessionStorage.getItem('fe_login_attempts') || '0', 10);
-let _loginLockoutUntil = parseInt(sessionStorage.getItem('fe_login_lockout') || '0', 10);
-const LOGIN_MAX_ATTEMPTS = 5;
-const LOGIN_BASE_DELAY_MS = 1000; // 1s, doubles each failure
-
-function bytesToHex(bytes) {
-  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function readAuthConfig() {
-  try {
-    const config = JSON.parse(localStorage.getItem(AUTH_CONFIG_KEY));
-    if (config?.version !== 1 || !Number.isInteger(config.iterations) ||
-        config.iterations < 100000 || config.iterations > 1000000 ||
-        !/^[a-f0-9]{32}$/.test(config.salt) || !/^[a-f0-9]{64}$/.test(config.hash)) return null;
-    return config;
-  } catch (_) {
-    return null;
-  }
-}
-
-async function derivePasswordHash(password, saltHex, iterations) {
-  const salt = new Uint8Array(saltHex.match(/../g).map(pair => parseInt(pair, 16)));
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, key, 256);
-  return bytesToHex(new Uint8Array(bits));
-}
-
-async function createAuthConfig(password) {
-  const salt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-  return { version: 1, iterations: AUTH_ITERATIONS, salt,
-    hash: await derivePasswordHash(password, salt, AUTH_ITERATIONS) };
-}
-
-async function matchesAuthConfig(password, config) {
-  const actual = await derivePasswordHash(password, config.salt, config.iterations);
-  let difference = 0;
-  for (let i = 0; i < config.hash.length; i++) difference |= actual.charCodeAt(i) ^ config.hash.charCodeAt(i);
-  return difference === 0;
-}
+// ─── Lock screen (email code) ───────────────────────────────────
+// js/email-login.js (shared with MoneyTrack and Deadline Tracker) emails a 6-digit code to
+// the owner's Gmail and stores a signed 30-day pass. Study data itself remains in
+// localStorage; this is a screen lock, not encryption.
+const LOCK_CONFIRM = "Lock MoneyTrack, Deadline Tracker and FE Civil on this device? You'll need a new email code to open them.";
 
 function bootApp() {
   initState();
@@ -82,107 +40,35 @@ function bootApp() {
   autoSyncDrive();
 }
 
-function initAuth() {
+function openApp() {
+  document.getElementById('login-gate').style.display = 'none';
+  document.body.classList.remove('auth-locked');
+  bootApp();
+}
+
+function showLockScreen() {
   const gate = document.getElementById('login-gate');
-  const config = readAuthConfig();
-  if (config && sessionStorage.getItem(AUTH_KEY) === '1') {
-    gate.style.display = 'none';
-    document.body.classList.remove('auth-locked');
-    bootApp();
-    return;
-  }
-  sessionStorage.removeItem(AUTH_KEY);
-  const setup = !config;
-  const input = document.getElementById('login-pw');
-  const confirmField = document.getElementById('login-confirm-field');
-  const confirmInput = document.getElementById('login-confirm-pw');
-  const error = document.getElementById('login-error');
-  const button = document.getElementById('login-submit');
-  confirmField.hidden = !setup;
-  confirmInput.required = setup;
-  input.autocomplete = setup ? 'new-password' : 'current-password';
-  document.getElementById('login-sub').textContent = setup
-    ? 'Choose a new password for this browser. Your saved study data stays here.'
-    : 'Enter this browser’s password to continue.';
-  button.textContent = setup ? 'Set password' : 'Unlock';
   gate.style.display = 'flex';
-  input.focus();
-  // Focus trap: keep focus inside the login modal
+  // Focus trap: keep focus inside the lock screen
   gate.addEventListener('keydown', e => {
-    if (e.key === 'Tab') {
-      const focusable = [...gate.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])')]
-        .filter(el => !el.closest('[hidden]') && !el.disabled);
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    }
+    if (e.key !== 'Tab') return;
+    const focusable = [...gate.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.closest('[hidden]') && !el.disabled);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
-  document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const pw = input.value;
-    error.textContent = '';
-
-    if (setup) {
-      if (pw.length < 12) { error.textContent = 'Use at least 12 characters.'; return; }
-      if (pw !== confirmInput.value) { error.textContent = 'Passwords do not match.'; return; }
-    }
-
-    // Rate limiting: check lockout
-    const now = Date.now();
-    if (!setup && now < _loginLockoutUntil) {
-      const waitSec = Math.ceil((_loginLockoutUntil - now) / 1000);
-      error.textContent = `Too many attempts. Try again in ${waitSec}s.`;
-      return;
-    }
-
-    button.disabled = true;
-    try {
-      let valid;
-      if (setup) {
-        localStorage.setItem(AUTH_CONFIG_KEY, JSON.stringify(await createAuthConfig(pw)));
-        valid = true;
-      } else {
-        valid = await matchesAuthConfig(pw, config);
-      }
-      if (valid) {
-        _loginAttempts = 0;
-        sessionStorage.removeItem('fe_login_attempts');
-        sessionStorage.removeItem('fe_login_lockout');
-        sessionStorage.setItem(AUTH_KEY, '1');
-        gate.style.display = 'none';
-        document.body.classList.remove('auth-locked');
-        bootApp();
-      } else {
-        _loginAttempts++;
-        sessionStorage.setItem('fe_login_attempts', String(_loginAttempts));
-        if (_loginAttempts >= LOGIN_MAX_ATTEMPTS) {
-          const delay = LOGIN_BASE_DELAY_MS * Math.pow(2, _loginAttempts - LOGIN_MAX_ATTEMPTS);
-          _loginLockoutUntil = Date.now() + Math.min(delay, 60000);
-          sessionStorage.setItem('fe_login_lockout', String(_loginLockoutUntil));
-          const waitSec = Math.ceil(Math.min(delay, 60000) / 1000);
-          error.textContent = `Too many attempts. Locked for ${waitSec}s.`;
-        } else {
-          error.textContent = `Incorrect password. ${LOGIN_MAX_ATTEMPTS - _loginAttempts} attempts remaining.`;
-        }
-        input.value = '';
-        input.focus();
-      }
-    } catch (_) {
-      error.textContent = 'Password unavailable. Enable browser storage and use HTTPS or localhost.';
-    } finally {
-      button.disabled = false;
-    }
+  EmailLogin.mountLockScreen({
+    app: 'fe-civil-study-tracker',
+    legacyKeys: ['fe_civil_auth_config'],
+    legacySessionKeys: ['fe_civil_auth', 'fe_login_attempts', 'fe_login_lockout'],
+    onUnlock: openApp,
   });
 }
 
 // ─── Cross-Tab Sync ──────────────────────────────────────────────────────────
 window.addEventListener('storage', (e) => {
-  if (e.key === AUTH_CONFIG_KEY) {
-    sessionStorage.removeItem(AUTH_KEY);
-    location.reload();
-    return;
-  }
   if (e.key && e.key.startsWith('fe_civil_')) {
     // Another tab changed data — reload state
     initState();
@@ -191,28 +77,16 @@ window.addEventListener('storage', (e) => {
   }
 });
 
-// ─── Idle Session Timeout ────────────────────────────────────────────────────
-let _lastActivity = Date.now();
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-
-function resetIdleTimer() { _lastActivity = Date.now(); }
-
-// Track user activity
-['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
-  document.addEventListener(evt, resetIdleTimer, { passive: true });
-});
-
-// Check every 60 seconds
-setInterval(() => {
-  if (sessionStorage.getItem(AUTH_KEY) === '1' && Date.now() - _lastActivity > IDLE_TIMEOUT_MS) {
-    sessionStorage.removeItem(AUTH_KEY);
-    location.reload();
-  }
-}, 60000);
-
 // ─── App Init ─────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initAuth();
+document.addEventListener('DOMContentLoaded', async () => {
+  EmailLogin.onLockedElsewhere(() => location.reload());
+  document.getElementById('lock-btn')?.addEventListener('click', () => {
+    if (!confirm(LOCK_CONFIRM)) return;
+    EmailLogin.lock();
+    location.reload();
+  });
+  if (await EmailLogin.hasValidPass()) openApp();
+  else showLockScreen();
 });
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
